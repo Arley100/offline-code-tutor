@@ -134,7 +134,8 @@ overwriting the baseline or prompt-v2 artifacts.
 - Responses can be incorrect or insecure. This version does not compile, execute, or verify suggested code.
 - `llama.cpp` installation is manual and platform-specific.
 - Prompt formatting and generation settings are a minimal baseline, not tuned results.
-- The benchmark has two regression prompts and no automatic scoring, token throughput capture, or peak-memory instrumentation yet.
+- The benchmark has two regression prompts and no automatic accuracy scoring yet.
+- Peak-memory instrumentation is optional and limited. If `psutil` is installed and the platform exposes a true peak (currently `peak_wset` on Windows), each benchmark records `harness_peak_rss_bytes`: the peak resident memory of the Python benchmark *harness* process only. This is **not** the `llama-cli` child-process inference memory, so it is a lower bound. When no true-peak field is available, the field is `null` (current RSS is deliberately not substituted, since it is not a peak). If `psutil` is missing the benchmark still runs and records the memory fields as `null` with `psutil_available: false`; no memory numbers are fabricated.
 
 The llama.cpp boundary lives in `src/runner.py`. It captures stdout, stderr,
 exit status, elapsed time, and timeout failures so it can be unit-tested without

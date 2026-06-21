@@ -3,7 +3,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
+from src import benchmark
 from src.benchmark import (
     build_benchmark_prompt,
     clean_llama_output,
@@ -13,6 +15,37 @@ from src.benchmark import (
     sha256_file,
 )
 from src.runner import LlamaRunResult
+
+
+class _FakeMemoryInfo:
+    def __init__(self, peak_wset=None, rss=None):
+        if peak_wset is not None:
+            self.peak_wset = peak_wset
+        self.rss = rss
+
+
+class _FakeProcess:
+    def __init__(self, memory_info):
+        self._memory_info = memory_info
+
+    def memory_info(self):
+        return self._memory_info
+
+
+class _FakePsutil:
+    """Minimal psutil stand-in so tests do not depend on psutil being installed."""
+
+    Error = Exception
+
+    def __init__(self, total_ram=8 * 1024**3, memory_info=None):
+        self._total_ram = total_ram
+        self._memory_info = memory_info or _FakeMemoryInfo(peak_wset=123_456_789)
+
+    def virtual_memory(self):
+        return mock.Mock(total=self._total_ram)
+
+    def Process(self):
+        return _FakeProcess(self._memory_info)
 
 
 class BenchmarkTests(unittest.TestCase):
@@ -108,6 +141,67 @@ class BenchmarkTests(unittest.TestCase):
         self.assertIn("processor", metadata)
         self.assertIn("cpu_count", metadata)
         self.assertIn("total_ram_bytes", metadata)
+        self.assertIn("psutil_available", metadata)
+        self.assertIn("memory_measurement_scope", metadata)
+        self.assertIn("harness_peak_rss_bytes", metadata)
+        self.assertEqual(metadata["memory_measurement_scope"], "harness_process")
+
+    def test_memory_fields_null_when_psutil_missing(self):
+        with mock.patch.object(benchmark, "_load_psutil", return_value=None):
+            metadata = collect_hardware_metadata()
+
+        self.assertFalse(metadata["psutil_available"])
+        self.assertIsNone(metadata["total_ram_bytes"])
+        self.assertIsNone(metadata["harness_peak_rss_bytes"])
+        # Scope is always present so a null value is unambiguous.
+        self.assertEqual(metadata["memory_measurement_scope"], "harness_process")
+
+    def test_records_harness_peak_rss_when_psutil_available(self):
+        fake = _FakePsutil(
+            total_ram=16 * 1024**3,
+            memory_info=_FakeMemoryInfo(peak_wset=123_456_789, rss=1),
+        )
+        with mock.patch.object(benchmark, "_load_psutil", return_value=fake):
+            metadata = collect_hardware_metadata()
+
+        self.assertTrue(metadata["psutil_available"])
+        self.assertEqual(metadata["total_ram_bytes"], 16 * 1024**3)
+        # Reports the real measured peak, not a fabricated number.
+        self.assertEqual(metadata["harness_peak_rss_bytes"], 123_456_789)
+        self.assertEqual(metadata["memory_measurement_scope"], "harness_process")
+
+    def test_harness_peak_rss_is_none_without_true_peak_field(self):
+        # No peak_wset available (e.g. non-Windows): current rss must NOT be
+        # reported as peak, so the field stays null even though psutil is present.
+        fake = _FakePsutil(memory_info=_FakeMemoryInfo(rss=777))
+        with mock.patch.object(benchmark, "_load_psutil", return_value=fake):
+            metadata = collect_hardware_metadata()
+
+        self.assertTrue(metadata["psutil_available"])
+        self.assertIsNone(metadata["harness_peak_rss_bytes"])
+
+    def test_benchmark_artifact_includes_memory_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            metadata = self._write_metadata(directory)
+            model = self._fake_file(directory, "tiny.gguf")
+            executable = self._fake_file(directory, "llama-cli")
+
+            def fake_runner(prompt, **kwargs):
+                return LlamaRunResult(True, "answer", "", 0, 1.0, ["fake"])
+
+            with mock.patch.object(benchmark, "_load_psutil", return_value=None):
+                artifact = run_benchmark(
+                    metadata_path=metadata,
+                    output_path=Path(directory) / "benchmark.json",
+                    model_path=str(model),
+                    llama_cli_path=str(executable),
+                    runner=fake_runner,
+                )
+
+        runtime = artifact["runtime"]
+        self.assertFalse(runtime["psutil_available"])
+        self.assertIsNone(runtime["harness_peak_rss_bytes"])
+        self.assertEqual(runtime["memory_measurement_scope"], "harness_process")
 
     def test_parses_llama_cpp_timing_stderr(self):
         stderr = """

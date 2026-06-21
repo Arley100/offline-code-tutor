@@ -105,14 +105,48 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def collect_hardware_metadata() -> dict[str, object]:
-    total_ram_bytes = None
+def _load_psutil():
+    """Return the psutil module if installed, otherwise None.
+
+    Isolated in a helper so the benchmark can run without psutil and so tests
+    can deterministically simulate psutil being present or absent.
+    """
     try:
         import psutil  # type: ignore
 
-        total_ram_bytes = psutil.virtual_memory().total
-    except (ImportError, AttributeError, OSError):
-        pass
+        return psutil
+    except ImportError:
+        return None
+
+
+def _harness_peak_rss_bytes(psutil) -> Optional[int]:
+    """Best-effort true peak resident memory of THIS Python harness process.
+
+    This is the benchmark process itself, not the llama-cli child process that
+    performs inference, so it is a lower bound and not a measure of model
+    inference memory. Returns None when no true-peak field is exposed (current
+    rss is deliberately not used, since it is not a peak).
+    """
+    if psutil is None:
+        return None
+    try:
+        memory_info = psutil.Process().memory_info()
+    except (AttributeError, OSError, psutil.Error):
+        return None
+    # Only report a genuine peak. peak_wset is a true peak (currently Windows);
+    # current rss is NOT a peak, so we return None rather than mislabel it.
+    peak = getattr(memory_info, "peak_wset", None)
+    return int(peak) if peak is not None else None
+
+
+def collect_hardware_metadata() -> dict[str, object]:
+    psutil = _load_psutil()
+    total_ram_bytes = None
+    if psutil is not None:
+        try:
+            total_ram_bytes = psutil.virtual_memory().total
+        except (AttributeError, OSError, psutil.Error):
+            total_ram_bytes = None
     return {
         "python_version": sys.version,
         "platform": platform.system(),
@@ -120,6 +154,11 @@ def collect_hardware_metadata() -> dict[str, object]:
         "processor": platform.processor() or None,
         "cpu_count": os.cpu_count(),
         "total_ram_bytes": total_ram_bytes,
+        "psutil_available": psutil is not None,
+        # Scope is constant so consumers know exactly what the number means even
+        # when psutil is missing and the value below is null.
+        "memory_measurement_scope": "harness_process",
+        "harness_peak_rss_bytes": _harness_peak_rss_bytes(psutil),
     }
 
 
