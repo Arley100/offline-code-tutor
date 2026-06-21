@@ -1,6 +1,10 @@
 # OfflineCodeTutor
 
-OfflineCodeTutor is a deliberately small, offline-first coding assistant for the ADTC 2026 local language model challenge. It uses Python as a thin CLI around a local `llama.cpp` executable and a GGUF coding model. The initial use case is helping students inspect short Python, C, and C++ snippets on modest hardware.
+OfflineCodeTutor is a deliberately small, offline-first coding assistant. It uses Python as a thin CLI around a local `llama.cpp` executable and a GGUF coding model. The initial use case is helping students inspect short Python, C, and C++ snippets on modest hardware.
+
+> **Eligibility note:** This repository is an independent project inspired by the ADTC 2026 Laptop LLM Challenge. It is not an official ADTC submission.
+
+OfflineCodeTutor is an independent portfolio/research project. The challenge framing influenced the constraints: offline inference, modest hardware, reproducible benchmarking, and honest tradeoff analysis.
 
 ## Repository layout
 
