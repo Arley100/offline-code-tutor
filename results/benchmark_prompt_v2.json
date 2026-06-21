@@ -1,0 +1,73 @@
+{
+  "project": "OfflineCodeTutor",
+  "created_at_utc": "2026-06-20T16:43:29.881838+00:00",
+  "benchmark_status": "completed",
+  "model": {
+    "path": "model\\Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+    "filename": "Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+    "sha256": "f530705d447660a4336c329981af164b471b60b974b1d808d57e8ec9fe23b239",
+    "size_bytes": 986048800
+  },
+  "runtime": {
+    "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "platform": "Windows",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "cpu_count": 16,
+    "total_ram_bytes": null,
+    "llama_cli_path": "C:\\Users\\ndari\\AppData\\Local\\Microsoft\\WinGet\\Packages\\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\\llama-cli.EXE"
+  },
+  "settings": {
+    "max_tokens": 64,
+    "temperature": 0.2,
+    "timeout_seconds": 120,
+    "prompt_variant": "prompt_v2"
+  },
+  "runs": [
+    {
+      "prompt_id": "python-factorial-debug",
+      "prompt": "Find the bug in this Python function and explain a minimal fix:\n\ndef factorial(n):\n    if n == 0:\n        return 0\n    return n * factorial(n - 1)",
+      "ok": true,
+      "elapsed_seconds": 5.837103199912235,
+      "return_code": 0,
+      "output_chars": 1447,
+      "stderr_chars": 0,
+      "tokens_per_second": 21.5,
+      "llama_timings": {
+        "prompt_tokens_per_second": 214.1,
+        "generation_tokens_per_second": 21.5
+      },
+      "error_message": null,
+      "output_preview": "\nLoading model... \n\n\n\u2584\u2584 \u2584\u2584\n\u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588  \u2580\u2580\u2588\u2584 \u2588\u2588\u2588\u2584\u2588\u2588\u2588\u2584  \u2580\u2580\u2588\u2584    \u2584\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2584 \u2588\u2588\u2588\u2588\u2584\n\u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588    \u2588\u2588    \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2580\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2580 \u2588\u2588\u2588\u2588\u2580\n                                    \u2588\u2588    \u2588\u2588\n                                    \u2580\u2580    \u2580\u2580\n\nbuild      : b9733-f449e0553\nmodel      : C:\\Users\\ndari\\Documents\\Codex\\2026-06-19\\you-are-helping-me-build-a\\model\\Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf\nmodalities : text\n\navailable commands:\n  /exit or Ctrl+C     stop or exit\n ",
+      "clean_output_preview": "Bug:\nThe function does not handle the case when `n` is a negative number. When `n` is negative, the function will raise a `RecursionError` because it will call itself indefinitely.\n\nMinimal fix:\nTo fix this, we need to add a check at the beginning of the function to return"
+    },
+    {
+      "prompt_id": "cpp-vector-bounds-debug",
+      "prompt": "Find the undefined behavior in this C++ code and explain a minimal fix:\n\nstd::vector<int> values{1, 2, 3};\nfor (std::size_t i = 0; i <= values.size(); ++i) {\n    std::cout << values[i] << '\\n';\n}",
+      "ok": true,
+      "elapsed_seconds": 5.5784037000266835,
+      "return_code": 0,
+      "output_chars": 1517,
+      "stderr_chars": 0,
+      "tokens_per_second": 21.5,
+      "llama_timings": {
+        "prompt_tokens_per_second": 190.7,
+        "generation_tokens_per_second": 21.5
+      },
+      "error_message": null,
+      "output_preview": "\nLoading model... \n\n\n\u2584\u2584 \u2584\u2584\n\u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588  \u2580\u2580\u2588\u2584 \u2588\u2588\u2588\u2584\u2588\u2588\u2588\u2584  \u2580\u2580\u2588\u2584    \u2584\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2584 \u2588\u2588\u2588\u2588\u2584\n\u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588    \u2588\u2588    \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2580\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2580 \u2588\u2588\u2588\u2588\u2580\n                                    \u2588\u2588    \u2588\u2588\n                                    \u2580\u2580    \u2580\u2580\n\nbuild      : b9733-f449e0553\nmodel      : C:\\Users\\ndari\\Documents\\Codex\\2026-06-19\\you-are-helping-me-build-a\\model\\Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf\nmodalities : text\n\navailable commands:\n  /exit or Ctrl+C     stop or exit\n ",
+      "clean_output_preview": "Original coding problem:\nFind the undefined behavior in this C++ code and explain a minimal fix:\n\nstd::vector<int> values{1, 2, 3};\nfor (std::size_t i = 0; i <= values.size(); ++i) {\n    std::cout << values[i] << '\n';\n}\n\nRespond using exactly this structure:\nBug:\nWhy it happens:\nMinimal fix:\nCorrected code:\nBeginner explanation:\n\nBug:\nThe undefined behavior in the provided code is that it attempts to access an element at index `values.size()` which is out of bounds. This is because `std::size_t` is an unsigned integer type and cannot represent negative values. When `i` reaches `values.size()`, it becomes a large positive"
+    }
+  ],
+  "manual_accuracy": {
+    "status": "not_scored",
+    "rubric": {
+      "correctness": null,
+      "clarity": null,
+      "beginner_friendliness": null,
+      "minimality_of_fix": null,
+      "hallucination_risk": null,
+      "offline_usefulness": null
+    }
+  }
+}

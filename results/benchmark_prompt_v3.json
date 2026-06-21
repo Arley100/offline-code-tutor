@@ -1,0 +1,73 @@
+{
+  "project": "OfflineCodeTutor",
+  "created_at_utc": "2026-06-21T05:25:42.370867+00:00",
+  "benchmark_status": "completed",
+  "model": {
+    "path": "model\\Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+    "filename": "Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf",
+    "sha256": "f530705d447660a4336c329981af164b471b60b974b1d808d57e8ec9fe23b239",
+    "size_bytes": 986048800
+  },
+  "runtime": {
+    "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "platform": "Windows",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "cpu_count": 16,
+    "total_ram_bytes": null,
+    "llama_cli_path": "C:\\Users\\ndari\\AppData\\Local\\Microsoft\\WinGet\\Packages\\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\\llama-cli.EXE"
+  },
+  "settings": {
+    "max_tokens": 128,
+    "temperature": 0.2,
+    "timeout_seconds": 120,
+    "prompt_variant": "prompt_v3"
+  },
+  "runs": [
+    {
+      "prompt_id": "python-factorial-debug",
+      "prompt": "Find the bug in this Python function and explain a minimal fix:\n\ndef factorial(n):\n    if n == 0:\n        return 0\n    return n * factorial(n - 1)",
+      "ok": true,
+      "elapsed_seconds": 14.271049299975857,
+      "return_code": 0,
+      "output_chars": 1779,
+      "stderr_chars": 0,
+      "tokens_per_second": 15.4,
+      "llama_timings": {
+        "prompt_tokens_per_second": 107.2,
+        "generation_tokens_per_second": 15.4
+      },
+      "error_message": null,
+      "output_preview": "\nLoading model... \n\n\n\u2584\u2584 \u2584\u2584\n\u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588  \u2580\u2580\u2588\u2584 \u2588\u2588\u2588\u2584\u2588\u2588\u2588\u2584  \u2580\u2580\u2588\u2584    \u2584\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2584 \u2588\u2588\u2588\u2588\u2584\n\u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588    \u2588\u2588    \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2580\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2580 \u2588\u2588\u2588\u2588\u2580\n                                    \u2588\u2588    \u2588\u2588\n                                    \u2580\u2580    \u2580\u2580\n\nbuild      : b9733-f449e0553\nmodel      : C:\\Users\\ndari\\Documents\\Codex\\2026-06-19\\you-are-helping-me-build-a\\model\\Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf\nmodalities : text\n\navailable commands:\n  /exit or Ctrl+C     stop or exit\n ",
+      "clean_output_preview": "Direct bug:\nThe function does not handle the case when `n` is 0 correctly. It returns 0, which is incorrect for factorial of 0.\n\nTrace:\nWhen `n` is 0, the function calls `factorial(n - 1)`, which results in a recursive call to `factorial(-1)`. Since `-1` is not a valid input for the factorial function, the function raises a `ValueError`.\n\nWhy it fails:\nThe factorial function is defined to be the product of all positive integers less than or equal to a given number. When `n` is 0, the factorial should"
+    },
+    {
+      "prompt_id": "cpp-vector-bounds-debug",
+      "prompt": "Find the undefined behavior in this C++ code and explain a minimal fix:\n\nstd::vector<int> values{1, 2, 3};\nfor (std::size_t i = 0; i <= values.size(); ++i) {\n    std::cout << values[i] << '\\n';\n}",
+      "ok": true,
+      "elapsed_seconds": 13.14101230003871,
+      "return_code": 0,
+      "output_chars": 1816,
+      "stderr_chars": 0,
+      "tokens_per_second": 16.3,
+      "llama_timings": {
+        "prompt_tokens_per_second": 118.5,
+        "generation_tokens_per_second": 16.3
+      },
+      "error_message": null,
+      "output_preview": "\nLoading model... \n\n\n\u2584\u2584 \u2584\u2584\n\u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588  \u2580\u2580\u2588\u2584 \u2588\u2588\u2588\u2584\u2588\u2588\u2588\u2584  \u2580\u2580\u2588\u2584    \u2584\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2584 \u2588\u2588\u2588\u2588\u2584\n\u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588    \u2588\u2588    \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2580\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2580 \u2588\u2588\u2588\u2588\u2580\n                                    \u2588\u2588    \u2588\u2588\n                                    \u2580\u2580    \u2580\u2580\n\nbuild      : b9733-f449e0553\nmodel      : C:\\Users\\ndari\\Documents\\Codex\\2026-06-19\\you-are-helping-me-build-a\\model\\Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf\nmodalities : text\n\navailable commands:\n  /exit or Ctrl+C     stop or exit\n ",
+      "clean_output_preview": "Direct bug:\nThe loop condition `i <= values.size()` is incorrect because it includes `values.size()` in the loop, which causes an out-of-bounds access when `i` equals `values.size()`.\n\nTrace:\nThe loop starts at `i = 0` and increments `i` by 1 in each iteration. When `i` equals `values.size()`, the loop condition becomes `i <= values.size()`, which is always true. This causes the loop to run indefinitely, leading to undefined behavior.\n\nWhy it fails:\nThe loop condition `i <= values.size()` is incorrect because it includes `values.size()`"
+    }
+  ],
+  "manual_accuracy": {
+    "status": "not_scored",
+    "rubric": {
+      "correctness": null,
+      "clarity": null,
+      "beginner_friendliness": null,
+      "minimality_of_fix": null,
+      "hallucination_risk": null,
+      "offline_usefulness": null
+    }
+  }
+}

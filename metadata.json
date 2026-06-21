@@ -1,0 +1,20 @@
+{
+  "project_name": "OfflineCodeTutor",
+  "description": "A minimal offline CLI coding assistant backed by a local GGUF model and llama.cpp.",
+  "model": {
+    "name": "Qwen2.5-Coder-1.5B-Instruct",
+    "quantization": "Q4_K_M",
+    "path": "model/Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf"
+  },
+  "test_prompts": [
+    {
+      "id": "python-factorial-debug",
+      "prompt": "Find the bug in this Python function and explain a minimal fix:\n\ndef factorial(n):\n    if n == 0:\n        return 0\n    return n * factorial(n - 1)"
+    },
+    {
+      "id": "cpp-vector-bounds-debug",
+      "prompt": "Find the undefined behavior in this C++ code and explain a minimal fix:\n\nstd::vector<int> values{1, 2, 3};\nfor (std::size_t i = 0; i <= values.size(); ++i) {\n    std::cout << values[i] << '\\n';\n}"
+    }
+  ]
+}
+

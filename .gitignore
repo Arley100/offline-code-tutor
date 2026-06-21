@@ -1,0 +1,16 @@
+# Local model weights are large and must never be committed.
+model/*
+!model/.gitkeep
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+benchmark_results.json
+
+model/*.gguf
+__pycache__/
+*.pyc
+.venv/
+
+work/
