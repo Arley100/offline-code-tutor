@@ -1,6 +1,6 @@
 # OfflineCodeTutor Benchmark Comparison
 
-Generated at: 2026-06-21T05:48:26.654848+00:00
+Generated at: 2026-06-21T08:45:19.437088+00:00
 
 ## Project and runtime
 
@@ -26,7 +26,7 @@ Generated at: 2026-06-21T05:48:26.654848+00:00
 | Variant | Runs scored | Correctness | Clarity | Beginner friendliness | Minimality | Hallucination risk | Offline usefulness |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | baseline | 2 | 2.50 | 3.50 | 3.00 | 2.00 | 2.50 | 3.00 |
-| prompt_v2 | 0 | not scored | not scored | not scored | not scored | not scored | not scored |
+| prompt_v2 | 2 | 2.00 | 3.00 | 2.00 | 1.50 | 2.00 | 2.50 |
 | prompt_v3 | 2 | 4.00 | 4.00 | 4.00 | 4.00 | 3.00 | 4.00 |
 
 ## Per-task notes
@@ -34,13 +34,13 @@ Generated at: 2026-06-21T05:48:26.654848+00:00
 ### Python factorial
 
 - baseline: The answer is clear but misses the main bug. The expected fix is that factorial(0) should return 1, not 0. The model instead focused on negative input, which is related to input validation but not the defect shown in the code.
-- prompt_v2: Not manually scored.
+- prompt_v2: Missed the actual factorial(0) base-case bug and focused on negative input. The answer was partially clear but cut off before giving a corrected fix.
 - prompt_v3: The answer correctly identifies the direct bug: factorial(0) returns 0 but should return 1. It also states the expected core fix. However, the trace contains an incorrect claim that when n is 0 the function calls factorial(n - 1); in reality, the function returns 0 immediately. Overall, prompt v3 substantially improves correctness compared with baseline and prompt v2.
 
 ### C++ vector bounds
 
 - baseline: The answer correctly identifies that values.size() is out of bounds because valid indices are 0, 1, and 2. The ideal minimal fix is changing <= to < in the loop condition. The answer is useful but incomplete because it does not fully show the corrected loop in the captured preview.
-- prompt_v2: Not manually scored.
+- prompt_v2: Correctly identified access at values.size() as out of bounds, but explanation drifted into confusing unsigned-integer reasoning and the corrected loop was not shown before truncation.
 - prompt_v3: The answer correctly identifies that i <= values.size() allows i == values.size(), which causes an out-of-bounds vector access. The ideal fix is changing <= to <. However, the trace incorrectly says the loop runs indefinitely; it actually reaches an invalid index and then would stop after i increments past size if execution continues.
 
 ## Conclusion

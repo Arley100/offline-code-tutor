@@ -35,7 +35,7 @@ All variants used the same model and the same two tasks from `metadata.json`:
 1. Diagnose a Python factorial function whose `factorial(0)` base case incorrectly returns `0` instead of `1`.
 2. Diagnose a C++ vector loop whose `<= values.size()` condition permits an out-of-bounds index.
 
-Each variant ran both prompts once with a 120-second timeout. Baseline and prompt v2 allowed 64 generated tokens; prompt v3 allowed 128 because the earlier structured answers were cut off. Wall-clock elapsed time and generation throughput came from recorded benchmark artifacts. Accuracy was scored manually on a 1-5 rubric; prompt v2 was not manually scored.
+Each variant ran both prompts once with a 120-second timeout. Baseline and prompt v2 allowed 64 generated tokens; prompt v3 allowed 128 because the earlier structured answers were cut off. Wall-clock elapsed time and generation throughput came from recorded benchmark artifacts. Accuracy was scored manually on a 1-5 rubric for all three variants.
 
 ## Prompt variants tested
 
@@ -56,10 +56,12 @@ Each variant ran both prompts once with a 120-second timeout. Baseline and promp
 | Variant | Runs scored | Correctness | Clarity | Beginner friendliness | Minimality | Hallucination risk | Offline usefulness |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Baseline | 2 | 2.50 | 3.50 | 3.00 | 2.00 | 2.50 | 3.00 |
-| Prompt v2 | 0 | not scored | not scored | not scored | not scored | not scored | not scored |
+| Prompt v2 | 2 | 2.00 | 3.00 | 2.00 | 1.50 | 2.00 | 2.50 |
 | Prompt v3 | 2 | 4.00 | 4.00 | 4.00 | 4.00 | 3.00 | 4.00 |
 
-The baseline missed the direct Python factorial defect and focused instead on negative-input validation. Its C++ answer identified the invalid `values.size()` index but did not fully present the corrected loop in the captured answer. Prompt v2 added a useful response structure but did not solve the Python failure.
+The baseline missed the direct Python factorial defect and focused instead on negative-input validation. Its C++ answer identified the invalid `values.size()` index but did not fully present the corrected loop in the captured answer.
+
+Prompt v2 added a useful response structure but, like the baseline, still missed the Python factorial bug and focused on negative input instead of the `factorial(0)` base case. On the C++ task it partially identified the out-of-bounds access at `values.size()`, but its explanation drifted into confusing unsigned-integer reasoning and, because the answer was truncated, it did not clearly show the corrected loop. Its manually scored correctness average of 2.00 sits between the baseline and prompt v3, so prompt v3 remains the strongest manually scored variant.
 
 Prompt v3 correctly identified both direct bugs. Trace-first reasoning substantially improved the factorial diagnosis, but it did not eliminate reasoning errors: the Python trace incorrectly claimed that the base case recurses, and the C++ trace incorrectly described the loop as indefinite. The model therefore remains capable of producing a correct fix alongside a flawed explanation.
 
@@ -70,7 +72,6 @@ The central tradeoff was correctness versus latency. Prompt v3 raised the manual
 ## Limitations
 
 - The benchmark contains only two tasks and one run per task and variant.
-- Prompt v2 has no manual score artifact.
 - Manual scoring is subjective despite using a fixed rubric.
 - Peak memory and time to first token were not measured, and prompt-processing throughput was not analyzed in the final comparison table.
 - The assistant does not compile or execute suggested fixes, so incorrect reasoning is not automatically detected.
