@@ -6,6 +6,47 @@ OfflineCodeTutor is a deliberately small, offline-first coding assistant. It use
 
 OfflineCodeTutor is an independent portfolio/research project. The challenge framing influenced the constraints: offline inference, modest hardware, reproducible benchmarking, and honest tradeoff analysis.
 
+## Current status
+
+- **Working today:** a Python CLI (`ask`, `benchmark`, `score`, `report`) that runs a local GGUF model through `llama.cpp`, writes reproducible JSON benchmark artifacts, supports manual 1–5 rubric scoring, and emits a Markdown comparison report. Covered by a unit-test suite that runs without a model or `llama.cpp` installed.
+- **Measured:** three prompt variants (`baseline`, `prompt_v2`, `prompt_v3`) over two debugging tasks, with manual scores and an honest correctness-versus-latency tradeoff recorded in `REPORT.md`.
+- **Not built yet:** the EvalForge web application described below. The documents under `docs/` are planning and specification only; no web app, server, or new runtime dependency exists in this repository.
+
+## Long-term direction: EvalForge / TutorBench Local
+
+OfflineCodeTutor is the CLI seed of a larger project: **EvalForge / TutorBench Local**, an evaluation studio for offline AI coding tutors.
+
+The thesis is that small local coding models can make programming help available offline, but fluent answers are not enough — they can be confidently wrong. EvalForge is intended to help developers test, compare, score, and improve offline coding assistants using reproducible prompts, recorded model runs, manual rubrics, and evidence-backed reports.
+
+The division of labour is deliberate:
+
+- **The CLI (this repo)** runs models locally and produces benchmark JSON artifacts. It stays small, inspectable, and dependency-light.
+- **The future web app** will *import* those artifacts, provide a manual scoring interface, compare prompt variants and models side by side, and export Markdown reports. It will not replace the CLI's local-inference role; it consumes the CLI's evidence.
+
+This keeps inference offline and reproducible while letting evaluation, comparison, and reporting grow into a full-stack product. See `docs/` for the product thesis, rubric, artifact format, roadmap, non-goals, and a draft full-stack specification.
+
+### Web app foundation (`web/`)
+
+The repository is now a small monorepo: the Python CLI stays at the root, and the
+web app foundation lives in `web/` (Next.js + TypeScript + Tailwind, PostgreSQL
+via Prisma). **Ticket 1 delivered the foundation only** — a product shell
+(landing, demo sign-in, protected dashboard, project placeholders), a Prisma
+schema draft, a synthetic seed script, and Vitest domain tests. **Artifact
+import, the scoring UI, and comparison dashboards are not implemented yet**, and
+no metrics shown in the app are real until artifact import lands.
+
+```bash
+cd web
+npm install
+cp .env.example .env        # then edit; never commit a real .env
+npm run dev                 # http://localhost:3000
+npm run typecheck && npm run lint && npm run test
+```
+
+Database setup (local PostgreSQL) and the full command list are in
+[`web/README.md`](web/README.md). The CLI is unaffected by the web app and is
+still run from the repository root as documented below.
+
 ## Repository layout
 
 ```text
@@ -15,6 +56,7 @@ OfflineCodeTutor/
 ├── offline_code_tutor.py
 ├── SPEC.md
 ├── REPORT.md
+├── docs/                  # product thesis, rubric, roadmap, full-stack spec draft
 ├── model/                 # GGUF files are ignored by Git
 ├── src/
 ├── examples/
