@@ -1,0 +1,94 @@
+// EvalForge / TutorBench Local — initial schema draft (Ticket 1).
+// Minimal but realistic entities. Artifact import and scoring logic are NOT
+// implemented yet; this schema only establishes the shape they will use.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String        @id @default(cuid())
+  email     String        @unique
+  name      String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  projects  Project[]
+  scores    ManualScore[]
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  tasks       BenchmarkTask[]
+  artifacts   Artifact[]
+}
+
+model BenchmarkTask {
+  id              String     @id @default(cuid())
+  projectId       String
+  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskKey         String // stable id, e.g. "python-factorial-debug"
+  prompt          String
+  language        String? // e.g. "python", "cpp"
+  expectedFixHint String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  modelRuns       ModelRun[]
+
+  @@unique([projectId, taskKey])
+}
+
+model Artifact {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  variant     String // "baseline" | "prompt_v2" | "prompt_v3"
+  modelSha256 String?
+  status      String     @default("imported") // "imported" | "invalid"
+  rawJson     Json // the validated source artifact, stored immutably
+  createdAt   DateTime   @default(now())
+  modelRuns   ModelRun[]
+}
+
+model ModelRun {
+  id                 String         @id @default(cuid())
+  artifactId         String
+  artifact           Artifact       @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  taskId             String?
+  task               BenchmarkTask? @relation(fields: [taskId], references: [id])
+  promptId           String // matches BenchmarkTask.taskKey from the artifact
+  ok                 Boolean
+  elapsedSeconds     Float? // null = unavailable, never 0
+  tokensPerSecond    Float? // null = unavailable, never 0
+  cleanOutputPreview String?
+  createdAt          DateTime       @default(now())
+  scores             ManualScore[]
+}
+
+model ManualScore {
+  id                   String   @id @default(cuid())
+  modelRunId           String
+  modelRun             ModelRun @relation(fields: [modelRunId], references: [id], onDelete: Cascade)
+  raterId              String?
+  rater                User?    @relation(fields: [raterId], references: [id])
+  // Rubric dimensions, each 1-5. hallucinationRisk is reversed: 5 = lowest risk.
+  correctness          Int
+  clarity              Int
+  beginnerFriendliness Int
+  minimalityOfFix      Int
+  hallucinationRisk    Int
+  offlineUsefulness    Int
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
