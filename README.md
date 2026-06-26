@@ -9,7 +9,7 @@ OfflineCodeTutor is an independent portfolio/research project. The challenge fra
 ## Current status
 
 - **Working today:** a Python CLI (`ask`, `benchmark`, `score`, `report`) that runs a local GGUF model through `llama.cpp`, writes reproducible JSON benchmark artifacts, supports manual 1–5 rubric scoring, and emits a Markdown comparison report. Covered by a unit-test suite that runs without a model or `llama.cpp` installed.
-- **Measured:** three prompt variants (`baseline`, `prompt_v2`, `prompt_v3`) over two debugging tasks, with manual scores and an honest correctness-versus-latency tradeoff recorded in `REPORT.md`.
+- **Measured:** the recorded experiment in `REPORT.md` covers three prompt variants (`baseline`, `prompt_v2`, `prompt_v3`) over the original two debugging tasks, with manual scores and an honest correctness-versus-latency tradeoff. The task pack has since been expanded to 10 stable tasks (see below); those additional tasks are defined for future runs and have **no recorded measurements yet** — no metrics are fabricated for them.
 - **Web app foundation:** the EvalForge / TutorBench Local app now lives in `web/`
   and supports projects, benchmark tasks, JSON artifact import, manual scoring, a
   comparison dashboard, and Markdown report export. It is still local-development
@@ -107,13 +107,40 @@ python offline_code_tutor.py ask --file examples/buggy_factorial.py
 python offline_code_tutor.py ask --file examples/vector_out_of_bounds.cpp
 ```
 
-Run the two fixed evaluation prompts:
+Run the benchmark task pack:
 
 ```bash
 python offline_code_tutor.py benchmark
+# run each task 3 times to gauge variability:
+python offline_code_tutor.py benchmark --repeats 3
+# isolate prompt wording from output length with an explicit budget:
+python offline_code_tutor.py benchmark --variant prompt_v3 --max-tokens 64
 ```
 
 The benchmark prints live wall-clock timings. It intentionally does not invent accuracy, memory, or throughput figures; record those through a controlled measurement process in `REPORT.md`.
+
+### Benchmark task pack
+
+`metadata.json` defines a versioned pack of **10 stable benchmark tasks** spanning
+Python, C, C++, and JavaScript across categories such as debugging, memory
+reasoning, code tracing, test design, and beginner explanation, at beginner /
+intermediate / advanced difficulty. Task ids (e.g. `py_list_mutation_bug`,
+`js_async_return_bug`, `cpp_pointer_aliasing`, `trace_recursive_sum`) are stable
+and machine-friendly so artifacts match tasks across runs; the original two task
+ids are preserved for backward compatibility. Each task carries optional metadata
+(title, language, category, difficulty, expected concepts, scoring notes, tags)
+that is copied into artifacts additively — missing metadata stays `null`, never
+fabricated. No model scores are invented: the pack defines tasks; actual quality
+comes only from real runs and human scoring.
+
+**Prompt-wording vs output-budget limitation:** by default `prompt_v3` uses a
+larger generation budget (128 tokens) than `baseline`/`prompt_v2` (64), so prompt
+wording and output length are confounded. Each artifact now records
+`settings.max_tokens_source` (`variant_default` or `explicit`); pass `--max-tokens`
+to fix one budget across variants and isolate the wording effect.
+
+Repeated runs are supported via `--repeats N` (default 1); each run records
+`repeat_index` and `repeat_count` additively.
 
 Each benchmark run writes a reproducible JSON artifact to
 `results/benchmark_local.json`. Missing runtime or model prerequisites are
@@ -155,7 +182,7 @@ zero measurements.
 
 ### Prompt v2 experiment
 
-Run the same two tasks and model with a structured debugging prompt:
+Run the task pack and model with a structured debugging prompt:
 
 ```bash
 python offline_code_tutor.py benchmark --variant prompt_v2
@@ -185,7 +212,7 @@ overwriting the baseline or prompt-v2 artifacts.
 - Responses can be incorrect or insecure. This version does not compile, execute, or verify suggested code.
 - `llama.cpp` installation is manual and platform-specific.
 - Prompt formatting and generation settings are a minimal baseline, not tuned results.
-- The benchmark has two regression prompts and no automatic accuracy scoring yet.
+- The benchmark task pack has 10 stable tasks but no automatic accuracy scoring yet; only the original two tasks have recorded measurements in `REPORT.md`.
 - Peak-memory instrumentation is optional and limited. If `psutil` is installed and the platform exposes a true peak (currently `peak_wset` on Windows), each benchmark records `harness_peak_rss_bytes`: the peak resident memory of the Python benchmark *harness* process only. This is **not** the `llama-cli` child-process inference memory, so it is a lower bound. When no true-peak field is available, the field is `null` (current RSS is deliberately not substituted, since it is not a peak). If `psutil` is missing the benchmark still runs and records the memory fields as `null` with `psutil_available: false`; no memory numbers are fabricated.
 
 The llama.cpp boundary lives in `src/runner.py`. It captures stdout, stderr,

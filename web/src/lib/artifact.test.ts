@@ -106,4 +106,26 @@ describe("parseArtifact", () => {
     const result = parseArtifact(obj);
     expect(result.ok).toBe(true);
   });
+
+  it("tolerates additive run/settings metadata from the expanded task pack", () => {
+    // Ticket 7 adds optional fields (task_title, category, repeat_index, etc.)
+    // and new settings keys. The importer must ignore unknowns and still parse,
+    // preserving required fields and treating missing metrics as null.
+    const base = JSON.parse(fixture("baseline.json"));
+    base.settings.max_tokens_source = "variant_default";
+    base.settings.repeats = 3;
+    base.runs[0].task_title = "Python factorial";
+    base.runs[0].language = "python";
+    base.runs[0].category = "debugging";
+    base.runs[0].difficulty = "beginner";
+    base.runs[0].expected_concepts = ["base case"];
+    base.runs[0].repeat_index = 1;
+    base.runs[0].repeat_count = 3;
+    const result = parseArtifact(JSON.stringify(base));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.artifact.runs[0].promptId).toBe("python-factorial-debug");
+    // The run with no metrics still maps to null, never 0.
+    expect(result.artifact.runs[1].tokensPerSecond).toBeNull();
+  });
 });

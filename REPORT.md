@@ -30,10 +30,16 @@ The model is small enough to be a plausible offline candidate while retaining co
 
 ## Benchmark method
 
-All variants used the same model and the same two tasks from `metadata.json`:
+All variants used the same model and the same two tasks (the original
+`python-factorial-debug` and `cpp-vector-bounds-debug`):
 
 1. Diagnose a Python factorial function whose `factorial(0)` base case incorrectly returns `0` instead of `1`.
 2. Diagnose a C++ vector loop whose `<= values.size()` condition permits an out-of-bounds index.
+
+The benchmark task pack in `metadata.json` has since been expanded to 10 stable
+tasks (added in Ticket 7) for future runs. The measurements in this report cover
+only the original two tasks above; the additional tasks have no recorded
+measurements yet, and no metrics are invented for them.
 
 Each variant ran both prompts once with a 120-second timeout. Baseline and prompt v2 allowed 64 generated tokens; prompt v3 allowed 128 because the earlier structured answers were cut off. Wall-clock elapsed time and generation throughput came from recorded benchmark artifacts. Accuracy was scored manually on a 1-5 rubric for all three variants.
 
@@ -71,7 +77,7 @@ The central tradeoff was correctness versus latency. Prompt v3 raised the manual
 
 ## Limitations
 
-- The benchmark contains only two tasks and one run per task and variant.
+- The recorded experiment covers only two tasks and one run per task and variant (the task pack is now larger but unmeasured).
 - Manual scoring is subjective despite using a fixed rubric.
 - Peak memory and time to first token were not measured, and prompt-processing throughput was not analyzed in the final comparison table.
 - The assistant does not compile or execute suggested fixes, so incorrect reasoning is not automatically detected.

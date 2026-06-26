@@ -10,7 +10,7 @@ The first version provides three commands:
 
 - `ask --question "..."` asks a direct debugging question.
 - `ask --file path/to/code.py` loads a source file and asks the model to inspect it.
-- `benchmark` runs exactly the two prompts in `metadata.json` and prints measured latency and generated output. It does not claim accuracy or performance results in advance.
+- `benchmark` runs the benchmark task pack defined in `metadata.json` (a set of stable, versioned tasks) and prints measured latency and generated output. It does not claim accuracy or performance results in advance. `--repeats N` runs each task N times; `--max-tokens N` sets an explicit generation budget.
 
 ## Runtime contract
 
@@ -36,6 +36,6 @@ The system prompt asks for a concise explanation, the likely root cause, a minim
 - Both `ask` input modes parse correctly and reject ambiguous input.
 - File input is loaded as UTF-8 with a useful error on failure.
 - Missing `llama-cli` and missing model weights produce clear setup guidance.
-- The benchmark uses the two versioned prompts and reports only measurements from the current run.
+- The benchmark uses the versioned task pack in `metadata.json` and reports only measurements from the current run. Task ids are stable; per-task metadata in artifacts is additive and optional.
 - Unit tests cover argument parsing and file loading without requiring a model.
 

@@ -54,10 +54,16 @@ sequential by default but several are parallelizable once the foundation exists.
 - **Done when:** a user can export a report that a recruiter or engineer could read
   standalone.
 
-## Ticket 7 — Expanded benchmark pack
-- Grow beyond two tasks: more Python, C, and C++ defects; repeated runs to measure
-  variability; controlled separation of prompt effect from output-length effect.
-- **Done when:** the benchmark pack is documented and reproducible.
+## Ticket 7 — Expanded benchmark pack — done
+- Grew the pack to **10 stable tasks** in `metadata.json` across Python, C, C++,
+  and JavaScript and categories (debugging, memory reasoning, code tracing, test
+  design, beginner explanation) at beginner/intermediate/advanced difficulty;
+  original two task ids preserved.
+- Added additive per-task metadata to artifacts (title, language, category,
+  difficulty, expected concepts, scoring notes, tags) — missing stays null.
+- Added `--repeats N` (records `repeat_index`/`repeat_count`) and `--max-tokens`
+  plus `settings.max_tokens_source` to make the prompt-wording-vs-output-budget
+  confound explicit. Importer/report verified compatible; no metrics fabricated.
 
 ## Ticket 8+ — Optional advanced capabilities
 - **Local runner integration:** optionally trigger CLI/`llama.cpp` runs from the

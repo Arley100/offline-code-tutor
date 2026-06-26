@@ -400,5 +400,111 @@ Exiting...
         self.assertNotIn("Respond using exactly this structure:", cleaned)
 
 
+class BenchmarkPackBehaviorTests(unittest.TestCase):
+    """Ticket 7: expanded task metadata, repeats, and budget provenance."""
+
+    def _write_metadata(self, directory: str, tasks=None) -> Path:
+        path = Path(directory) / "metadata.json"
+        tasks = tasks or [
+            {
+                "id": "py_demo_task",
+                "title": "Demo task",
+                "language": "python",
+                "category": "debugging",
+                "difficulty": "beginner",
+                "prompt": "Find the bug.",
+                "expected_concepts": ["off-by-one"],
+                "scoring_notes": "Should find the bug.",
+                "tags": ["demo"],
+            },
+            {"id": "plain_task", "prompt": "Second prompt"},
+        ]
+        path.write_text(
+            json.dumps({"test_prompts": tasks}), encoding="utf-8"
+        )
+        return path
+
+    def _fake_file(self, directory: str, name: str) -> Path:
+        path = Path(directory) / name
+        path.write_bytes(b"placeholder")
+        return path
+
+    def _run(self, directory, **kwargs):
+        return run_benchmark(
+            metadata_path=self._write_metadata(directory),
+            output_path=Path(directory) / "out.json",
+            model_path=str(self._fake_file(directory, "tiny.gguf")),
+            llama_cli_path=str(self._fake_file(directory, "llama-cli")),
+            runner=lambda prompt, **_: LlamaRunResult(True, "answer", "", 0, 1.0, ["f"]),
+            **kwargs,
+        )
+
+    def test_default_repeats_is_one(self):
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = self._run(directory)
+        self.assertEqual(artifact["settings"]["repeats"], 1)
+        self.assertEqual(len(artifact["runs"]), 2)
+        self.assertTrue(all(run["repeat_index"] == 1 for run in artifact["runs"]))
+        self.assertTrue(all(run["repeat_count"] == 1 for run in artifact["runs"]))
+
+    def test_repeats_expand_runs_predictably_with_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = self._run(directory, repeats=3)
+        self.assertEqual(artifact["settings"]["repeats"], 3)
+        self.assertEqual(len(artifact["runs"]), 6)  # 2 tasks * 3 repeats
+        first_task_runs = [r for r in artifact["runs"] if r["prompt_id"] == "py_demo_task"]
+        self.assertEqual([r["repeat_index"] for r in first_task_runs], [1, 2, 3])
+        self.assertTrue(all(r["repeat_count"] == 3 for r in first_task_runs))
+
+    def test_repeats_must_be_positive(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(benchmark.BenchmarkError):
+                self._run(directory, repeats=0)
+
+    def test_additive_task_metadata_in_run_records(self):
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = self._run(directory)
+        rich = next(r for r in artifact["runs"] if r["prompt_id"] == "py_demo_task")
+        self.assertEqual(rich["task_title"], "Demo task")
+        self.assertEqual(rich["language"], "python")
+        self.assertEqual(rich["category"], "debugging")
+        self.assertEqual(rich["difficulty"], "beginner")
+        self.assertEqual(rich["expected_concepts"], ["off-by-one"])
+        # Old required fields remain for importer compatibility.
+        for key in ("prompt_id", "prompt", "ok"):
+            self.assertIn(key, rich)
+
+    def test_missing_task_metadata_is_null_not_fabricated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = self._run(directory)
+        plain = next(r for r in artifact["runs"] if r["prompt_id"] == "plain_task")
+        for key in ("task_title", "language", "category", "difficulty",
+                    "expected_concepts", "scoring_notes", "tags"):
+            self.assertIsNone(plain[key])
+        # Missing metrics also remain null (no timing in fake output).
+        self.assertIsNone(plain["tokens_per_second"])
+
+    def test_max_tokens_source_records_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            default_artifact = self._run(directory)
+        self.assertEqual(default_artifact["settings"]["max_tokens_source"], "variant_default")
+        self.assertEqual(default_artifact["settings"]["max_tokens"], 64)
+
+        with tempfile.TemporaryDirectory() as directory:
+            explicit_artifact = self._run(directory, max_tokens=200)
+        self.assertEqual(explicit_artifact["settings"]["max_tokens_source"], "explicit")
+        self.assertEqual(explicit_artifact["settings"]["max_tokens"], 200)
+
+    def test_duplicate_task_ids_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tasks = [
+                {"id": "dup", "prompt": "a"},
+                {"id": "dup", "prompt": "b"},
+            ]
+            path = self._write_metadata(directory, tasks)
+            with self.assertRaises(benchmark.BenchmarkError):
+                benchmark.load_benchmark_prompts(path)
+
+
 if __name__ == "__main__":
     unittest.main()

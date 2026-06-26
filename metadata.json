@@ -9,12 +9,113 @@
   "test_prompts": [
     {
       "id": "python-factorial-debug",
-      "prompt": "Find the bug in this Python function and explain a minimal fix:\n\ndef factorial(n):\n    if n == 0:\n        return 0\n    return n * factorial(n - 1)"
+      "title": "Python factorial base case",
+      "language": "python",
+      "category": "debugging",
+      "difficulty": "beginner",
+      "prompt": "Find the bug in this Python function and explain a minimal fix:\n\ndef factorial(n):\n    if n == 0:\n        return 0\n    return n * factorial(n - 1)",
+      "expected_concepts": ["base case", "factorial(0) == 1", "minimal fix"],
+      "scoring_notes": "Should identify that the base case returns 0 instead of 1 and fix it to return 1.",
+      "tags": ["recursion", "off-by-base-case"]
     },
     {
       "id": "cpp-vector-bounds-debug",
-      "prompt": "Find the undefined behavior in this C++ code and explain a minimal fix:\n\nstd::vector<int> values{1, 2, 3};\nfor (std::size_t i = 0; i <= values.size(); ++i) {\n    std::cout << values[i] << '\\n';\n}"
+      "title": "C++ vector out-of-bounds loop",
+      "language": "cpp",
+      "category": "memory-reasoning",
+      "difficulty": "intermediate",
+      "prompt": "Find the undefined behavior in this C++ code and explain a minimal fix:\n\nstd::vector<int> values{1, 2, 3};\nfor (std::size_t i = 0; i <= values.size(); ++i) {\n    std::cout << values[i] << '\\n';\n}",
+      "expected_concepts": ["off-by-one", "out-of-bounds index", "use < not <="],
+      "scoring_notes": "Should identify that i <= values.size() reads values[size()] and fix the condition to <.",
+      "tags": ["bounds", "loop"]
+    },
+    {
+      "id": "py_list_mutation_bug",
+      "title": "Python mutable default argument",
+      "language": "python",
+      "category": "debugging",
+      "difficulty": "intermediate",
+      "prompt": "Find the bug in this Python function and explain a minimal fix:\n\ndef add_item(item, items=[]):\n    items.append(item)\n    return items",
+      "expected_concepts": ["mutable default argument", "shared state across calls", "None sentinel"],
+      "scoring_notes": "Should identify the shared default list and fix with items=None then items = [] if items is None.",
+      "tags": ["gotcha", "default-arg"]
+    },
+    {
+      "id": "py_off_by_one_loop",
+      "title": "Python sum-to-n off-by-one",
+      "language": "python",
+      "category": "debugging",
+      "difficulty": "beginner",
+      "prompt": "This function should return the sum of the first n natural numbers (1..n) but returns the wrong total. Find the bug and explain a minimal fix:\n\ndef sum_to_n(n):\n    total = 0\n    for i in range(n):\n        total += i\n    return total",
+      "expected_concepts": ["off-by-one", "range bounds", "range(1, n + 1)"],
+      "scoring_notes": "Should identify that range(n) yields 0..n-1 and fix to range(1, n + 1).",
+      "tags": ["off-by-one", "loop"]
+    },
+    {
+      "id": "js_async_return_bug",
+      "title": "JavaScript async forEach returns early",
+      "language": "javascript",
+      "category": "debugging",
+      "difficulty": "intermediate",
+      "prompt": "This JavaScript function should return an array of fetched results but resolves before the work finishes. Find the bug and explain a minimal fix:\n\nasync function loadAll(ids) {\n  const results = [];\n  ids.forEach(async (id) => {\n    const r = await fetch(`/item/${id}`);\n    results.push(await r.json());\n  });\n  return results;\n}",
+      "expected_concepts": ["forEach does not await callbacks", "use for...of or Promise.all", "async iteration"],
+      "scoring_notes": "Should explain that forEach ignores the returned promises and fix with for...of + await or Promise.all(ids.map(...)).",
+      "tags": ["async", "promises"]
+    },
+    {
+      "id": "cpp_pointer_aliasing",
+      "title": "C++ reference to local variable",
+      "language": "cpp",
+      "category": "memory-reasoning",
+      "difficulty": "advanced",
+      "prompt": "Identify the undefined behavior in this C++ function and explain a minimal fix:\n\nint& firstOrDefault(std::vector<int>& v) {\n    if (v.empty()) {\n        int fallback = 0;\n        return fallback;\n    }\n    return v[0];\n}",
+      "expected_concepts": ["returning reference to local", "dangling reference", "object lifetime"],
+      "scoring_notes": "Should identify the dangling reference to the local fallback and fix by returning by value or a valid persistent reference.",
+      "tags": ["lifetime", "references"]
+    },
+    {
+      "id": "c_string_bounds",
+      "title": "C string buffer overflow",
+      "language": "c",
+      "category": "memory-reasoning",
+      "difficulty": "intermediate",
+      "prompt": "Identify the memory bug in this C code and explain a minimal fix:\n\nchar buf[8];\nstrcpy(buf, \"hello world\");\nprintf(\"%s\\n\", buf);",
+      "expected_concepts": ["buffer overflow", "bounds checking", "strncpy/snprintf", "null terminator"],
+      "scoring_notes": "Should identify that the 11+1 byte string overflows buf[8] and fix with a larger buffer or a bounded copy.",
+      "tags": ["bounds", "strings"]
+    },
+    {
+      "id": "trace_recursive_sum",
+      "title": "Trace recursive list sum",
+      "language": "python",
+      "category": "code-tracing",
+      "difficulty": "intermediate",
+      "prompt": "Trace this function step by step for sum_list([2, 4, 6]) and state the final return value, then say whether the code is correct:\n\ndef sum_list(xs):\n    if not xs:\n        return 0\n    return xs[0] + sum_list(xs[1:])",
+      "expected_concepts": ["recursion unwinding", "base case returns 0", "final value 12", "code is correct"],
+      "scoring_notes": "Code is correct. A good trace reaches 12 and recognizes the empty-list base case; watch for invented bugs.",
+      "tags": ["tracing", "recursion"]
+    },
+    {
+      "id": "design_edge_tests",
+      "title": "Design edge-case tests for clamp",
+      "language": "python",
+      "category": "test-design",
+      "difficulty": "intermediate",
+      "prompt": "Design a focused set of test cases, including edge cases, for this function. List inputs and expected outputs. Do not rewrite the function:\n\ndef clamp(value, low, high):\n    if value < low:\n        return low\n    if value > high:\n        return high\n    return value",
+      "expected_concepts": ["boundary values", "value below/within/above range", "low == high", "value equal to low or high"],
+      "scoring_notes": "Should propose boundary and inside/outside cases; strong answers cover low == high and value exactly at bounds.",
+      "tags": ["testing", "edge-cases"]
+    },
+    {
+      "id": "explain_big_o_beginner",
+      "title": "Explain quadratic complexity to a beginner",
+      "language": "python",
+      "category": "explanation",
+      "difficulty": "beginner",
+      "prompt": "Explain to a beginner, in simple terms, the time complexity of this function and why. Avoid jargon where possible:\n\ndef has_duplicate(nums):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] == nums[j]:\n                return True\n    return False",
+      "expected_concepts": ["nested loops", "O(n^2) / quadratic growth", "work grows with the square of the input"],
+      "scoring_notes": "Should explain the nested loops cause roughly n*n comparisons (quadratic) in accessible language.",
+      "tags": ["complexity", "explanation"]
     }
   ]
 }
-

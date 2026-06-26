@@ -70,15 +70,18 @@ no true peak is available. Importers must treat `null` as "unavailable," never 0
 ### `settings`
 ```jsonc
 {
-  "max_tokens": 64,            // 64 for baseline/prompt_v2, 128 for prompt_v3
+  "max_tokens": 64,             // 64 for baseline/prompt_v2, 128 for prompt_v3
+  "max_tokens_source": "variant_default", // "variant_default" | "explicit" (Ticket 7)
   "temperature": 0.2,
   "timeout_seconds": 120,
-  "prompt_variant": "prompt_v2" // "baseline" | "prompt_v2" | "prompt_v3"
+  "prompt_variant": "prompt_v2", // "baseline" | "prompt_v2" | "prompt_v3"
+  "repeats": 1                   // tasks are run this many times (Ticket 7)
 }
 ```
 
 ### `runs[]`
-One entry per benchmark task (currently two).
+One entry per benchmark task per repeat (the pack now has ~10 tasks; `repeats`
+multiplies the run count).
 ```jsonc
 {
   "prompt_id": "python-factorial-debug",  // stable task id
@@ -93,9 +96,22 @@ One entry per benchmark task (currently two).
   "error_message": null,                   // string when ok is false
   "output_preview": "...",                 // raw, capped at 500 chars
   "clean_output_preview": "...",           // cleaned answer, capped at 1000 chars
+  "repeat_index": 1,                       // 1-based repeat number (Ticket 7)
+  "repeat_count": 1,                       // total repeats for this run (Ticket 7)
+  // Additive optional task metadata (Ticket 7); null when the task omits a field:
+  "task_title": "Python factorial base case",
+  "language": "python",
+  "category": "debugging",
+  "difficulty": "beginner",
+  "expected_concepts": ["base case"],
+  "scoring_notes": "...",
+  "tags": ["recursion"],
   "manual_score": { ... }                  // OPTIONAL; present only after scoring
 }
 ```
+All Ticket 7 fields are **additive**: older artifacts that lack them still import,
+and the importer ignores unknown fields. Missing task metadata stays `null`, never
+fabricated.
 
 ### `runs[].manual_score` (after scoring)
 ```jsonc

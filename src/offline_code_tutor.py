@@ -42,12 +42,28 @@ def build_parser() -> argparse.ArgumentParser:
     source.add_argument("--file", type=Path, help="A UTF-8 source file to inspect.")
 
     benchmark_parser = subparsers.add_parser(
-        "benchmark", help="Run the two prompts in metadata.json and report live timings."
+        "benchmark",
+        help="Run the benchmark task pack in metadata.json and report live timings.",
     )
     benchmark_parser.add_argument(
         "--variant",
         choices=("prompt_v2", "prompt_v3"),
         help="Run a named prompt experiment without overwriting the baseline artifact.",
+    )
+    benchmark_parser.add_argument(
+        "--repeats",
+        type=int,
+        default=1,
+        help="Run each task this many times to gauge variability (default: 1).",
+    )
+    benchmark_parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help=(
+            "Explicit generation token budget for every task. Overrides the "
+            "variant default, so prompt wording can be isolated from output length."
+        ),
     )
     score_parser = subparsers.add_parser(
         "score", help="Manually score an existing benchmark artifact."
@@ -101,7 +117,11 @@ def ask_model(question: str) -> LlamaRunResult:
     return result
 
 
-def run_benchmark_command(variant: str | None = None) -> None:
+def run_benchmark_command(
+    variant: str | None = None,
+    repeats: int = 1,
+    max_tokens: int | None = None,
+) -> None:
     output_paths = {
         None: DEFAULT_RESULTS_PATH,
         "prompt_v2": PROMPT_V2_RESULTS_PATH,
@@ -109,7 +129,12 @@ def run_benchmark_command(variant: str | None = None) -> None:
     }
     output_path = output_paths[variant]
     try:
-        artifact = run_benchmark(output_path=output_path, prompt_variant=variant)
+        artifact = run_benchmark(
+            output_path=output_path,
+            prompt_variant=variant,
+            repeats=repeats,
+            max_tokens=max_tokens,
+        )
     except BenchmarkError as exc:
         raise TutorError(str(exc)) from exc
     runs = artifact["runs"]
@@ -150,7 +175,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = ask_model(question)
             print(result.output, end="" if result.output.endswith("\n") else "\n")
         elif args.command == "benchmark":
-            run_benchmark_command(args.variant)
+            run_benchmark_command(args.variant, args.repeats, args.max_tokens)
         elif args.command == "score":
             run_score_command(args.input, args.output)
         else:

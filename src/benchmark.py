@@ -33,19 +33,24 @@ class BenchmarkError(RuntimeError):
     """A benchmark configuration or persistence error."""
 
 
-def load_benchmark_prompts(path: Path = DEFAULT_METADATA_PATH) -> list[dict[str, str]]:
+def load_benchmark_prompts(path: Path = DEFAULT_METADATA_PATH) -> list[dict[str, object]]:
     try:
         metadata = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise BenchmarkError(f"Could not load benchmark metadata from {path}: {exc}") from exc
     prompts = metadata.get("test_prompts")
-    if not isinstance(prompts, list) or len(prompts) != 2:
-        raise BenchmarkError("metadata.json must contain exactly two test_prompts.")
+    if not isinstance(prompts, list) or len(prompts) < 1:
+        raise BenchmarkError("metadata.json must contain a non-empty test_prompts list.")
+    seen_ids: set[str] = set()
     for prompt in prompts:
         if not isinstance(prompt, dict) or not isinstance(prompt.get("id"), str) or not isinstance(
             prompt.get("prompt"), str
         ):
             raise BenchmarkError("Each benchmark prompt must have string id and prompt fields.")
+        prompt_id = prompt["id"]
+        if prompt_id in seen_ids:
+            raise BenchmarkError(f"Duplicate benchmark prompt id: {prompt_id}")
+        seen_ids.add(prompt_id)
     return prompts
 
 
@@ -76,6 +81,12 @@ def build_benchmark_prompt(
             ),
             "cpp-vector-bounds-debug": (
                 "Trace the loop indices for values.size() == 3."
+            ),
+            "py_off_by_one_loop": (
+                "Trace sum_to_n(3) and compare it to the intended 1+2+3."
+            ),
+            "trace_recursive_sum": (
+                "Trace sum_list([2, 4, 6]) frame by frame to the base case."
             ),
         }
         trace_target = trace_targets.get(prompt_id, "Trace the shown example.")
@@ -305,16 +316,34 @@ def _model_metadata(model: Optional[Path]) -> dict[str, object]:
     }
 
 
+# Optional, additive per-task metadata copied into each run record. Missing
+# fields are recorded as null (unavailable), never fabricated.
+OPTIONAL_TASK_FIELDS = (
+    ("task_title", "title"),
+    ("language", "language"),
+    ("category", "category"),
+    ("difficulty", "difficulty"),
+    ("expected_concepts", "expected_concepts"),
+    ("scoring_notes", "scoring_notes"),
+    ("tags", "tags"),
+)
+
+
 def _run_record(
-    prompt: dict[str, str], result: LlamaRunResult, effective_prompt: Optional[str] = None
+    prompt: dict[str, object],
+    result: LlamaRunResult,
+    effective_prompt: Optional[str] = None,
+    repeat_index: int = 1,
+    repeat_count: int = 1,
 ) -> dict[str, object]:
     timings = parse_llama_timings(f"{result.output}\n{result.stderr}")
+    prompt_text = str(prompt["prompt"])
     clean_output = clean_llama_output(
-        result.output, effective_prompt if effective_prompt is not None else prompt["prompt"]
+        result.output, effective_prompt if effective_prompt is not None else prompt_text
     )
-    return {
+    record: dict[str, object] = {
         "prompt_id": prompt["id"],
-        "prompt": prompt["prompt"],
+        "prompt": prompt_text,
         "ok": result.ok,
         "elapsed_seconds": result.elapsed_seconds,
         "return_code": result.return_code,
@@ -325,7 +354,13 @@ def _run_record(
         "error_message": result.error_message,
         "output_preview": result.output[:OUTPUT_PREVIEW_CHARS],
         "clean_output_preview": clean_output[:CLEAN_OUTPUT_PREVIEW_CHARS],
+        "repeat_index": repeat_index,
+        "repeat_count": repeat_count,
     }
+    # Additive task metadata; absent fields remain null rather than fabricated.
+    for record_key, source_key in OPTIONAL_TASK_FIELDS:
+        record[record_key] = prompt.get(source_key)
+    return record
 
 
 def run_benchmark(
@@ -337,11 +372,18 @@ def run_benchmark(
     temperature: float = 0.2,
     timeout_seconds: int = 120,
     prompt_variant: Optional[str] = None,
+    repeats: int = 1,
     runner: Callable[..., LlamaRunResult] = run_llama_prompt,
 ) -> dict[str, object]:
+    if repeats < 1:
+        raise BenchmarkError("repeats must be a positive integer.")
     prompts = load_benchmark_prompts(metadata_path)
     llama_cli, executable_error = resolve_llama_cli(llama_cli_path)
     model, model_error = resolve_model(model_path)
+    # Make output-budget provenance explicit: prompt_v3 historically used a larger
+    # default budget than the other variants, so prompt wording and output budget
+    # are not isolated unless max_tokens is passed explicitly.
+    max_tokens_source = "explicit" if max_tokens is not None else "variant_default"
     effective_max_tokens = (
         max_tokens if max_tokens is not None else (128 if prompt_variant == "prompt_v3" else 64)
     )
@@ -349,17 +391,26 @@ def run_benchmark(
     runs = []
     for prompt in prompts:
         effective_prompt = build_benchmark_prompt(
-            prompt["prompt"], prompt_variant, prompt["id"]
+            str(prompt["prompt"]), prompt_variant, str(prompt["id"])
         )
-        result = runner(
-            effective_prompt,
-            model_path=str(model) if model else model_path,
-            llama_cli_path=llama_cli or llama_cli_path,
-            max_tokens=effective_max_tokens,
-            temperature=temperature,
-            timeout_seconds=timeout_seconds,
-        )
-        runs.append(_run_record(prompt, result, effective_prompt))
+        for repeat_index in range(1, repeats + 1):
+            result = runner(
+                effective_prompt,
+                model_path=str(model) if model else model_path,
+                llama_cli_path=llama_cli or llama_cli_path,
+                max_tokens=effective_max_tokens,
+                temperature=temperature,
+                timeout_seconds=timeout_seconds,
+            )
+            runs.append(
+                _run_record(
+                    prompt,
+                    result,
+                    effective_prompt,
+                    repeat_index=repeat_index,
+                    repeat_count=repeats,
+                )
+            )
 
     successful_runs = sum(1 for run in runs if run["ok"])
     if successful_runs == len(runs):
@@ -379,9 +430,11 @@ def run_benchmark(
         "runtime": runtime,
         "settings": {
             "max_tokens": effective_max_tokens,
+            "max_tokens_source": max_tokens_source,
             "temperature": temperature,
             "timeout_seconds": timeout_seconds,
             "prompt_variant": prompt_variant or "baseline",
+            "repeats": repeats,
         },
         "runs": runs,
         "manual_accuracy": {
