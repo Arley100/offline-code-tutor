@@ -1,11 +1,11 @@
 # Full-Stack Spec — Draft
 
-> **Status: partially implemented.** Tickets 1–4 are built (see "Implemented so
-> far" below). The remaining sections — dashboard, report, real auth — are still
+> **Status: partially implemented.** Tickets 1–5 are built (see "Implemented so
+> far" below). The remaining sections — report export, real auth — are still
 > draft specifications describing intended behavior. Technology choices
 > that are now in use are marked; the rest remain proposals.
 >
-> **Implemented so far (Tickets 1–4):** Next.js (App Router) + TypeScript +
+> **Implemented so far (Tickets 1–5):** Next.js (App Router) + TypeScript +
 > Tailwind in `web/`; PostgreSQL via Prisma; demo placeholder cookie auth with
 > route-protection middleware; project and benchmark-task CRUD via Server Actions
 > with pure validation helpers and Vitest tests; **JSON artifact import** (pure
@@ -13,7 +13,9 @@
 > `taskKey`, duplicate guard via content hash, missing metrics stored as null);
 > **manual scoring UI** for imported model runs (six 1–5 rubric dimensions plus
 > notes, create/update behavior for the demo user, score coverage summary, no
-> artifact mutation); synthetic seed + Docker Compose Postgres.
+> artifact mutation); **comparison dashboard** (`/projects/[id]/compare`) with
+> per-variant and run-level summaries, evidence-level callouts, and pure tested
+> helpers; synthetic seed + Docker Compose Postgres.
 
 ## Goals and boundaries
 
@@ -99,13 +101,19 @@ shared runtime.
   then updates that user's existing score or creates one. It does not auto-score
   and does not mutate `Artifact.rawJson`.
 
-## Comparison dashboard
+## Comparison dashboard — implemented (Ticket 5)
 
-- Per project: variants (and later models) side by side.
-- Columns: status, avg elapsed, avg generation tokens/sec, successful runs, and
-  per-dimension manual averages.
-- Unavailable measurements rendered explicitly (e.g. "not available" / "not
-  scored"), never as 0.
+- Route `/projects/[id]/compare`, linked from the project page. Pure logic lives
+  in `src/lib/comparison.ts` (`buildComparison`) and is unit tested.
+- Per project, variants compared side by side: run count, scored count, average
+  manual score, per-dimension averages (hallucination risk labeled "5 = lowest
+  risk"), and average elapsed seconds / tokens-per-second.
+- Run-level table linking each run to the existing scoring page.
+- Unavailable measurements render as "—", never 0. Unscored runs are excluded
+  from score averages (not treated as 0).
+- Evidence-aware insight callout: no winner when there are no scored runs; a
+  "limited evidence" label for small samples or a single scored variant; only a
+  normal (still non-statistical) summary once enough scored runs span ≥2 variants.
 
 ## Report generation
 

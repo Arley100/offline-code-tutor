@@ -4,16 +4,16 @@ This is the **foundation** of the EvalForge web app: the evaluation, comparison,
 and reporting layer that will sit on top of benchmark artifacts produced by the
 OfflineCodeTutor Python CLI at the repository root.
 
-> **Status (through Ticket 4):** the app has real, database-backed project and
-> benchmark-task management, plus **JSON artifact import** (validate, store, create
-> model runs, match runs to tasks by stable task key), plus **manual scoring** for
-> imported model runs. The comparison dashboard is still **not implemented yet** —
-> imported metrics are shown as-is and missing metrics are shown as unavailable,
-> never zero. This is an
-> independent portfolio/research project inspired by the ADTC 2026 Laptop LLM
-> Challenge — not an official submission. Authentication is still a demo
-> placeholder, clearly labeled in the
-> UI; it is **not** production-ready auth.
+> **Status (through Ticket 5):** the app has real, database-backed project and
+> benchmark-task management, **JSON artifact import** (validate, store, create
+> model runs, match runs to tasks by stable task key), **manual scoring** for
+> imported model runs, and a **comparison dashboard** that summarizes runs and
+> manual scores by prompt variant. The dashboard summarizes only stored evidence:
+> it does not auto-score, does not claim statistical certainty, and shows missing
+> metrics as unavailable ("—"), never zero. This is an independent
+> portfolio/research project inspired by the ADTC 2026 Laptop LLM Challenge — not
+> an official submission. Authentication is still a demo placeholder, clearly
+> labeled in the UI; it is **not** production-ready auth.
 
 ## Stack
 
@@ -210,6 +210,46 @@ npm run test        # vitest run (pure domain tests)
 - No mutation of imported artifact raw JSON.
 - No real authentication or multi-rater workflow yet.
 
+## What Ticket 5 includes
+
+- A **comparison dashboard** at `/projects/[id]/compare`, linked from the project
+  page.
+- Summary cards: imported runs, scored runs, unscored runs, matched/unmatched,
+  and average manual score (or "—").
+- A score-coverage bar and a per-variant table: run count, scored count, average
+  score, each rubric dimension (hallucination risk labeled "5 = lowest risk"),
+  and average elapsed seconds / tokens-per-second.
+- A run-level table: prompt id, matched task, variant, model, ok/failure,
+  elapsed, tokens/s, score status/average, and a link to the existing score page.
+- A cautious insight callout that adapts to the evidence level (none / limited /
+  ok) and never over-claims.
+- Pure comparison helpers in `src/lib/comparison.ts` with Vitest tests.
+
+### How the comparison is computed
+
+- **Manual scores are human-assigned.** The dashboard never auto-scores and never
+  mutates imported artifact JSON.
+- **Per-variant averages** group runs by `Artifact.variant`. A variant's average
+  score is the mean of its scored runs' per-run averages; each rubric dimension is
+  averaged across that variant's scored runs.
+- **Missing metrics are unavailable, never zero.** Average elapsed/tokens-per-sec
+  use only finite values; if none are available the cell shows "—". Unscored runs
+  contribute nothing to score averages (they are not treated as 0).
+- **Hallucination risk stays reversed** (5 = lowest risk) and is averaged as-is.
+- **Evidence levels.** With no scored runs, no winner is declared. With a small
+  sample or a single scored variant, results are labeled limited evidence. Only
+  with enough scored runs across at least two variants is the comparison shown as
+  a normal (still non-statistical) summary.
+
+## What Ticket 5 intentionally does NOT include
+
+- No report/export generation (that is Ticket 6).
+- No charting library or heavy dashboard dependency (CSS-only indicators).
+- No AI, no auto-scoring, no statistical/significance claims.
+- No execution of imported code and no mutation of artifact raw JSON.
+- No inline score editing on the dashboard (it links to the scoring page).
+- No real authentication or multi-rater workflow yet.
+
 ## Layout
 
 ```text
@@ -220,11 +260,12 @@ web/
 │   └── seed.ts           # synthetic demo seed
 ├── src/
 │   ├── app/
-│   │   ├── projects/     # project + task CRUD pages and Server Actions
+│   │   ├── projects/     # project + task CRUD, import, scoring, and compare pages
+│   │   │   └── [id]/compare/  # comparison dashboard (Ticket 5)
 │   │   ├── dashboard/    # protected overview
 │   │   └── api/auth/     # demo sign-in / sign-out routes
 │   ├── components/       # client form + delete-confirm components
-│   ├── lib/              # validation, domain helpers, prisma + auth placeholders
+│   ├── lib/              # validation, domain, comparison, artifact, prisma, auth
 │   └── middleware.ts     # demo route protection
 ├── .env.example
 └── package.json

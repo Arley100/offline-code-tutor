@@ -109,7 +109,15 @@ export default async function ProjectDetailPage({
         <Link href="/projects" className="text-sm hover:underline">
           ← Back to projects
         </Link>
-        <h1 className="text-2xl font-bold">{project.name}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">{project.name}</h1>
+          <Link
+            href={`/projects/${project.id}/compare`}
+            className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+          >
+            Comparison dashboard →
+          </Link>
+        </div>
       </div>
 
       <section className="rounded-lg border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
