@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDemoUser } from "@/lib/demo-user";
+import { averageManualScore, roundTo2 } from "@/lib/domain";
 import { ProjectForm } from "@/components/ProjectForm";
 import { TaskForm } from "@/components/TaskForm";
 import { ImportArtifactForm } from "@/components/ImportArtifactForm";
@@ -33,7 +34,14 @@ async function loadProject(id: string) {
           orderBy: { createdAt: "desc" },
           include: {
             modelRuns: {
-              include: { task: { select: { title: true, taskKey: true } } },
+              include: {
+                task: { select: { title: true, taskKey: true } },
+                scores: {
+                  where: { raterId: user.id },
+                  orderBy: { updatedAt: "desc" },
+                  take: 1,
+                },
+              },
             },
           },
         },
@@ -72,6 +80,28 @@ export default async function ProjectDetailPage({
   }
 
   const project = result.project;
+  const allRuns = project.artifacts.flatMap((artifact) => artifact.modelRuns);
+  const scoredRuns = allRuns.filter((run) => run.scores.length > 0);
+  const runScoreAverages = scoredRuns
+    .map((run) => {
+      const score = run.scores[0];
+      return averageManualScore({
+        correctness: score.correctness,
+        clarity: score.clarity,
+        beginnerFriendliness: score.beginnerFriendliness,
+        minimalityOfFix: score.minimalityOfFix,
+        hallucinationRisk: score.hallucinationRisk,
+        offlineUsefulness: score.offlineUsefulness,
+      });
+    })
+    .filter((value): value is number => value !== null);
+  const overallScoreAverage =
+    runScoreAverages.length === 0
+      ? null
+      : roundTo2(
+          runScoreAverages.reduce((sum, value) => sum + value, 0) /
+            runScoreAverages.length,
+        );
 
   return (
     <div className="space-y-8">
@@ -174,8 +204,17 @@ export default async function ProjectDetailPage({
         </h2>
         <p className="text-xs text-neutral-500">
           Runs are matched to benchmark tasks by stable task key. Manual scoring
-          of runs comes in a later ticket.
+          is human-assigned and never mutates the imported artifact JSON.
         </p>
+        {allRuns.length > 0 ? (
+          <p className="text-xs text-neutral-500">
+            Manual scoring: {scoredRuns.length}/{allRuns.length} run
+            {allRuns.length === 1 ? "" : "s"} scored
+            {overallScoreAverage === null
+              ? ""
+              : ` · average score ${overallScoreAverage}/5`}
+          </p>
+        ) : null}
         {project.artifacts.length === 0 ? (
           <div className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500 dark:border-neutral-700">
             No artifacts imported yet. Import an OfflineCodeTutor benchmark JSON
@@ -244,10 +283,25 @@ export default async function ProjectDetailPage({
                           <th className="py-1 pr-3 font-medium">OK</th>
                           <th className="py-1 pr-3 font-medium">Elapsed (s)</th>
                           <th className="py-1 pr-3 font-medium">Tokens/s</th>
+                          <th className="py-1 pr-3 font-medium">Score</th>
+                          <th className="py-1 pr-3 font-medium">Action</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {artifact.modelRuns.map((run) => (
+                        {artifact.modelRuns.map((run) => {
+                          const score = run.scores[0] ?? null;
+                          const scoreAverage = score
+                            ? averageManualScore({
+                                correctness: score.correctness,
+                                clarity: score.clarity,
+                                beginnerFriendliness:
+                                  score.beginnerFriendliness,
+                                minimalityOfFix: score.minimalityOfFix,
+                                hallucinationRisk: score.hallucinationRisk,
+                                offlineUsefulness: score.offlineUsefulness,
+                              })
+                            : null;
+                          return (
                           <tr
                             key={run.id}
                             className="border-t border-neutral-100 dark:border-neutral-800"
@@ -269,8 +323,31 @@ export default async function ProjectDetailPage({
                             <td className="py-1 pr-3">
                               {metric(run.tokensPerSecond)}
                             </td>
+                            <td className="py-1 pr-3">
+                              {score ? (
+                                <span className="text-green-700 dark:text-green-400">
+                                  Scored
+                                  {scoreAverage === null
+                                    ? ""
+                                    : ` · ${scoreAverage}/5`}
+                                </span>
+                              ) : (
+                                <span className="text-amber-700 dark:text-amber-500">
+                                  Unscored
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-1 pr-3">
+                              <Link
+                                href={`/projects/${project.id}/runs/${run.id}/score`}
+                                className="rounded-md border border-neutral-300 px-2 py-1 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                              >
+                                {score ? "Edit score" : "Score"}
+                              </Link>
+                            </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

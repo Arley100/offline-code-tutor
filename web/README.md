@@ -4,11 +4,12 @@ This is the **foundation** of the EvalForge web app: the evaluation, comparison,
 and reporting layer that will sit on top of benchmark artifacts produced by the
 OfflineCodeTutor Python CLI at the repository root.
 
-> **Status (through Ticket 3):** the app has real, database-backed project and
+> **Status (through Ticket 4):** the app has real, database-backed project and
 > benchmark-task management, plus **JSON artifact import** (validate, store, create
-> model runs, match runs to tasks by stable task key). The scoring UI and
-> comparison dashboard are still **not implemented yet** — imported metrics are
-> shown as-is and missing metrics are shown as unavailable, never zero. This is an
+> model runs, match runs to tasks by stable task key), plus **manual scoring** for
+> imported model runs. The comparison dashboard is still **not implemented yet** —
+> imported metrics are shown as-is and missing metrics are shown as unavailable,
+> never zero. This is an
 > independent portfolio/research project inspired by the ADTC 2026 Laptop LLM
 > Challenge — not an official submission. Authentication is still a demo
 > placeholder, clearly labeled in the
@@ -80,7 +81,10 @@ healthy before running `npm run db:push`.
    from the repo root). The app validates it, stores the artifact, creates a model
    run per benchmark run, and matches runs to tasks by `taskKey` == the run's
    `prompt_id`. Unmatched runs are imported and clearly flagged.
-4. All data belongs to a single demo user until real auth is added.
+4. Use the **Score** / **Edit score** link on any imported model run to assign a
+   manual rubric score. Scores are human-authored evaluation data; the app does
+   not auto-score with AI and does not mutate the imported artifact JSON.
+5. All data belongs to a single demo user until real auth is added.
 
 ### Importing an artifact
 
@@ -95,6 +99,27 @@ healthy before running `npm run db:push`.
   but flagged.
 - **Duplicate guard:** re-importing identical JSON into the same project is
   blocked via a content hash. Delete the artifact to re-import.
+
+### Manual scoring
+
+Manual scoring follows `docs/EVAL_RUBRIC.md`. Each imported `ModelRun` can be
+scored on six required 1–5 dimensions:
+
+- correctness
+- clarity
+- beginner friendliness
+- minimality of fix
+- hallucination risk
+- offline usefulness
+
+`hallucination risk` uses a reversed good-is-high convention: **5 means lowest
+risk** and 1 means highest risk. Notes are optional. The score page shows the
+run's prompt id, matched task title, prompt, expected fix hint when available,
+variant/model information, output preview, ok/failure status, latency, and
+tokens/sec. Missing metrics render as "—", never zero.
+
+Saving a score creates or updates the demo user's manual score for that run. It
+does not alter `Artifact.rawJson` and it never fabricates scores or metrics.
 
 ## Run
 
@@ -152,12 +177,38 @@ npm run test        # vitest run (pure domain tests)
 
 ## What Ticket 3 intentionally does NOT include
 
-- No manual scoring UI (that is Ticket 4).
 - No comparison dashboard beyond simple counts.
 - No real authentication (the cookie demo is a placeholder, labeled in the UI).
 - No AI features, no inference, and no execution of imported code.
 - No fabricated metrics; missing metrics are unavailable, never zero.
 - No real or private data — seed data and fixtures are synthetic.
+
+## What Ticket 4 includes
+
+- Dedicated manual scoring page for each imported model run:
+  `/projects/[id]/runs/[runId]/score`.
+- Evidence-first scoring context: task/prompt metadata, expected fix hint,
+  variant/model information, output preview, ok/failure status, and nullable
+  performance metrics.
+- Six required 1–5 rubric inputs plus optional notes, using the rubric from
+  `docs/EVAL_RUBRIC.md`.
+- Clear hallucination-risk helper text: 5 means lowest risk.
+- Server Action to create or update the demo user's score for a run after
+  verifying project ownership.
+- Project detail indicators for scored/unscored runs and a small average score
+  summary.
+- Pure validation helpers and tests for score ranges, integer-only values,
+  missing fields, unavailable-value averaging, and the reversed hallucination
+  risk convention.
+
+## What Ticket 4 intentionally does NOT include
+
+- No comparison dashboard across variants (that is Ticket 5).
+- No charts beyond the small score coverage/average text.
+- No AI auto-scoring.
+- No execution or verification of imported code.
+- No mutation of imported artifact raw JSON.
+- No real authentication or multi-rater workflow yet.
 
 ## Layout
 

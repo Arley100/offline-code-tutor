@@ -1,17 +1,19 @@
 # Full-Stack Spec — Draft
 
-> **Status: partially implemented.** Tickets 1–3 are built (see "Implemented so
-> far" below). The remaining sections — scoring, dashboard, report, real auth —
-> are still draft specifications describing intended behavior. Technology choices
+> **Status: partially implemented.** Tickets 1–4 are built (see "Implemented so
+> far" below). The remaining sections — dashboard, report, real auth — are still
+> draft specifications describing intended behavior. Technology choices
 > that are now in use are marked; the rest remain proposals.
 >
-> **Implemented so far (Tickets 1–3):** Next.js (App Router) + TypeScript +
+> **Implemented so far (Tickets 1–4):** Next.js (App Router) + TypeScript +
 > Tailwind in `web/`; PostgreSQL via Prisma; demo placeholder cookie auth with
 > route-protection middleware; project and benchmark-task CRUD via Server Actions
 > with pure validation helpers and Vitest tests; **JSON artifact import** (pure
 > parser/validator, `Artifact` + `ModelRun` creation, run-to-task matching by
 > `taskKey`, duplicate guard via content hash, missing metrics stored as null);
-> synthetic seed + Docker Compose Postgres.
+> **manual scoring UI** for imported model runs (six 1–5 rubric dimensions plus
+> notes, create/update behavior for the demo user, score coverage summary, no
+> artifact mutation); synthetic seed + Docker Compose Postgres.
 
 ## Goals and boundaries
 
@@ -83,12 +85,19 @@ shared runtime.
   metadata (variant, model sha256, benchmark status, source created-at).
 - Duplicate imports into the same project are blocked via a SHA-256 content hash.
 
-## Manual scores
+## Manual scores — implemented (Ticket 4)
 
 - Implements `EVAL_RUBRIC.md`: six integer dimensions (1–5) plus `notes`.
 - Enforce the reversed `hallucination_risk` convention in validation and display.
 - Scores attach to a model run; the source artifact is never mutated.
 - A run is "scored" only when all six dimensions are present and valid.
+- UI route: `/projects/[id]/runs/[runId]/score`.
+- The score page shows prompt/task context, expected fix hint when available,
+  variant/model information, model output preview, ok/failure status, and nullable
+  latency/speed metrics. Missing values render as unavailable, never zero.
+- `saveManualScore` verifies the run belongs to the current demo user's project,
+  then updates that user's existing score or creates one. It does not auto-score
+  and does not mutate `Artifact.rawJson`.
 
 ## Comparison dashboard
 
@@ -119,7 +128,7 @@ ModelRun(id, artifact_id -> Artifact, task_key, ok, return_code?, elapsed_second
          tokens_per_second?, clean_output_preview, timings_json)
 ManualScore(id, model_run_id -> ModelRun, user_id -> User, correctness, clarity,
             beginner_friendliness, minimality_of_fix, hallucination_risk,
-            offline_usefulness, notes, created_at)
+            offline_usefulness, notes, created_at)  # implemented (Ticket 4)
 Report(id, project_id -> Project, markdown, created_at)
 ```
 Nullable fields are marked `?`. Foreign keys cascade on project delete.
@@ -153,6 +162,10 @@ POST   /api/projects/:id/reports           # generate report
 GET    /api/reports/:id                     # markdown export
 ```
 All routes are scoped to the authenticated user's ownership.
+
+Ticket 4 implements scoring with a Next.js page plus Server Action rather than a
+separate public API route: `GET /projects/:id/runs/:runId/score` and
+`saveManualScore`.
 
 ## Testing strategy
 

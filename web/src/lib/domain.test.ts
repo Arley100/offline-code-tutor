@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregateManualScores,
+  averageManualScore,
   projectSummary,
+  RUBRIC_DIMENSIONS,
   roundTo2,
+  validateManualScoreInput,
   type ManualScore,
 } from "./domain";
 
@@ -45,6 +48,76 @@ describe("aggregateManualScores", () => {
     // hallucinationRisk is already on a 5=good scale; averaged, not inverted.
     expect(averages.hallucinationRisk).toBe(3);
     expect(averages.clarity).toBe(3);
+  });
+});
+
+describe("validateManualScoreInput", () => {
+  const validInput = {
+    correctness: "5",
+    clarity: "4",
+    beginnerFriendliness: "4",
+    minimalityOfFix: "5",
+    hallucinationRisk: "5",
+    offlineUsefulness: "4",
+    notes: "Correct and easy to use.",
+  };
+
+  it("accepts a valid complete manual score", () => {
+    const result = validateManualScoreInput(validInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.correctness).toBe(5);
+    expect(result.data.notes).toBe("Correct and easy to use.");
+  });
+
+  it("rejects a score below 1", () => {
+    const result = validateManualScoreInput({ ...validInput, correctness: "0" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.fieldErrors.correctness).toMatch(/between 1 and 5/i);
+  });
+
+  it("rejects a score above 5", () => {
+    const result = validateManualScoreInput({ ...validInput, clarity: "6" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.fieldErrors.clarity).toMatch(/between 1 and 5/i);
+  });
+
+  it("rejects a non-integer score", () => {
+    const result = validateManualScoreInput({
+      ...validInput,
+      beginnerFriendliness: "3.5",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.fieldErrors.beginnerFriendliness).toMatch(/whole-number/i);
+  });
+
+  it("rejects a missing score", () => {
+    const result = validateManualScoreInput({
+      ...validInput,
+      offlineUsefulness: "",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.fieldErrors.offlineUsefulness).toMatch(/whole-number/i);
+  });
+});
+
+describe("averageManualScore", () => {
+  it("does not treat unavailable dimensions as zero", () => {
+    expect(averageManualScore({ correctness: 5 })).toBe(5);
+    expect(averageManualScore({})).toBeNull();
+  });
+});
+
+describe("rubric metadata", () => {
+  it("documents hallucination risk as a reversed good-is-high scale", () => {
+    const hallucinationRisk = RUBRIC_DIMENSIONS.find(
+      (dimension) => dimension.field === "hallucinationRisk",
+    );
+    expect(hallucinationRisk?.helper).toMatch(/5 means lowest risk/i);
   });
 });
 

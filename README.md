@@ -10,7 +10,10 @@ OfflineCodeTutor is an independent portfolio/research project. The challenge fra
 
 - **Working today:** a Python CLI (`ask`, `benchmark`, `score`, `report`) that runs a local GGUF model through `llama.cpp`, writes reproducible JSON benchmark artifacts, supports manual 1–5 rubric scoring, and emits a Markdown comparison report. Covered by a unit-test suite that runs without a model or `llama.cpp` installed.
 - **Measured:** three prompt variants (`baseline`, `prompt_v2`, `prompt_v3`) over two debugging tasks, with manual scores and an honest correctness-versus-latency tradeoff recorded in `REPORT.md`.
-- **Not built yet:** the EvalForge web application described below. The documents under `docs/` are planning and specification only; no web app, server, or new runtime dependency exists in this repository.
+- **Web app foundation:** the EvalForge / TutorBench Local app now lives in `web/`
+  and supports projects, benchmark tasks, JSON artifact import, and manual
+  scoring. It is still local-development software with demo placeholder auth;
+  comparison dashboards and report export are not implemented yet.
 
 ## Long-term direction: EvalForge / TutorBench Local
 
@@ -30,11 +33,11 @@ This keeps inference offline and reproducible while letting evaluation, comparis
 The repository is now a small monorepo: the Python CLI stays at the root, and the
 web app lives in `web/` (Next.js + TypeScript + Tailwind, PostgreSQL via Prisma).
 Ticket 1 delivered the foundation, Ticket 2 added database-backed project and
-benchmark-task management, and **Ticket 3 added JSON artifact import** (validate a
-CLI benchmark artifact, store it, create model runs, and match runs to tasks by
-stable key). **The scoring UI and comparison dashboard are still not implemented
-yet**; imported metrics are shown as-is and missing metrics are shown as
-unavailable, never zero.
+benchmark-task management, Ticket 3 added JSON artifact import, and **Ticket 4
+added manual scoring** for imported model runs. The comparison dashboard is still
+not implemented yet; imported metrics are shown as-is and missing metrics are
+shown as unavailable, never zero. Manual scores are human-assigned only; the web
+app does not auto-score with AI and does not mutate imported artifact JSON.
 
 ```bash
 cd web

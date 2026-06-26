@@ -13,6 +13,7 @@ import {
   validateProjectInput,
   validateTaskInput,
 } from "@/lib/validation";
+import { validateManualScoreInput } from "@/lib/domain";
 
 const DB_ERROR =
   "Could not reach the database. Make sure PostgreSQL is running and DATABASE_URL is set (see web/README.md).";
@@ -311,4 +312,71 @@ export async function deleteArtifact(formData: FormData): Promise<void> {
   }
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}`);
+}
+
+export async function saveManualScore(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const projectId = String(formData.get("projectId") ?? "");
+  const runId = String(formData.get("runId") ?? "");
+  const result = validateManualScoreInput({
+    correctness: formData.get("correctness"),
+    clarity: formData.get("clarity"),
+    beginnerFriendliness: formData.get("beginnerFriendliness"),
+    minimalityOfFix: formData.get("minimalityOfFix"),
+    hallucinationRisk: formData.get("hallucinationRisk"),
+    offlineUsefulness: formData.get("offlineUsefulness"),
+    notes: formData.get("notes"),
+  });
+
+  if (!result.ok) {
+    return { ok: false, fieldErrors: result.fieldErrors };
+  }
+
+  try {
+    const user = await getOrCreateDemoUser();
+    const run = await prisma.modelRun.findFirst({
+      where: {
+        id: runId,
+        artifact: { projectId, project: { ownerId: user.id } },
+      },
+      select: {
+        id: true,
+        scores: {
+          where: { raterId: user.id },
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!run) {
+      return { ok: false, error: "Model run not found for this project." };
+    }
+
+    const existingScore = run.scores[0];
+    if (existingScore) {
+      await prisma.manualScore.update({
+        where: { id: existingScore.id },
+        data: result.data,
+      });
+    } else {
+      await prisma.manualScore.create({
+        data: {
+          ...result.data,
+          modelRunId: run.id,
+          raterId: user.id,
+        },
+      });
+    }
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    return { ok: false, error: DB_ERROR };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/runs/${runId}/score`);
+  return { ok: true, message: "Manual score saved." };
 }
