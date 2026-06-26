@@ -1,11 +1,11 @@
 # Full-Stack Spec — Draft
 
-> **Status: partially implemented.** Tickets 1–5 are built (see "Implemented so
-> far" below). The remaining sections — report export, real auth — are still
-> draft specifications describing intended behavior. Technology choices
+> **Status: partially implemented.** Tickets 1–6 are built (see "Implemented so
+> far" below). The remaining sections — real auth and later roadmap items — are
+> still draft specifications describing intended behavior. Technology choices
 > that are now in use are marked; the rest remain proposals.
 >
-> **Implemented so far (Tickets 1–5):** Next.js (App Router) + TypeScript +
+> **Implemented so far (Tickets 1–6):** Next.js (App Router) + TypeScript +
 > Tailwind in `web/`; PostgreSQL via Prisma; demo placeholder cookie auth with
 > route-protection middleware; project and benchmark-task CRUD via Server Actions
 > with pure validation helpers and Vitest tests; **JSON artifact import** (pure
@@ -15,7 +15,8 @@
 > notes, create/update behavior for the demo user, score coverage summary, no
 > artifact mutation); **comparison dashboard** (`/projects/[id]/compare`) with
 > per-variant and run-level summaries, evidence-level callouts, and pure tested
-> helpers; synthetic seed + Docker Compose Postgres.
+> helpers; **Markdown report export** (`/projects/[id]/report.md` route handler +
+> pure tested `generateReportMarkdown`); synthetic seed + Docker Compose Postgres.
 
 ## Goals and boundaries
 
@@ -115,12 +116,19 @@ shared runtime.
   "limited evidence" label for small samples or a single scored variant; only a
   normal (still non-statistical) summary once enough scored runs span ≥2 variants.
 
-## Report generation
+## Report generation — implemented (Ticket 6)
 
-- Export Markdown equivalent to the CLI's `benchmark_comparison.md`, plus
-  per-task notes and the honest tradeoff narrative.
-- Reports are reproducible from stored runs and scores; regenerating does not alter
-  source artifacts.
+- "Export Markdown" on the comparison dashboard links to a route handler at
+  `/projects/[id]/report.md`, which verifies ownership, fetches the dashboard's
+  evidence, and returns `text/markdown` as an attachment
+  (`evalforge-report-<project-slug>.md`).
+- Pure generator `generateReportMarkdown` (in `src/lib/report.ts`, unit tested)
+  accepts already-fetched data and never queries the DB.
+- The report covers evidence status, overall summary, imported artifacts,
+  per-variant comparison, run-level evidence, the rubric, missing-data notes,
+  limitations, and next steps. Missing values render as `—` (never 0), no winner
+  is stated without scored runs, limited evidence is labeled, and no
+  statistical-certainty claims are made. Read-only: no DB or artifact mutation.
 
 ## Database entities (proposed)
 

@@ -4,16 +4,17 @@ This is the **foundation** of the EvalForge web app: the evaluation, comparison,
 and reporting layer that will sit on top of benchmark artifacts produced by the
 OfflineCodeTutor Python CLI at the repository root.
 
-> **Status (through Ticket 5):** the app has real, database-backed project and
+> **Status (through Ticket 6):** the app has real, database-backed project and
 > benchmark-task management, **JSON artifact import** (validate, store, create
 > model runs, match runs to tasks by stable task key), **manual scoring** for
-> imported model runs, and a **comparison dashboard** that summarizes runs and
-> manual scores by prompt variant. The dashboard summarizes only stored evidence:
-> it does not auto-score, does not claim statistical certainty, and shows missing
-> metrics as unavailable ("—"), never zero. This is an independent
-> portfolio/research project inspired by the ADTC 2026 Laptop LLM Challenge — not
-> an official submission. Authentication is still a demo placeholder, clearly
-> labeled in the UI; it is **not** production-ready auth.
+> imported model runs, a **comparison dashboard** that summarizes runs and manual
+> scores by prompt variant, and **Markdown report export** of that evidence. The
+> dashboard and report summarize only stored evidence: they do not auto-score, do
+> not claim statistical certainty, and show missing metrics as unavailable ("—"),
+> never zero. This is an independent portfolio/research project inspired by the
+> ADTC 2026 Laptop LLM Challenge — not an official submission. Authentication is
+> still a demo placeholder, clearly labeled in the UI; it is **not**
+> production-ready auth.
 
 ## Stack
 
@@ -250,6 +251,48 @@ npm run test        # vitest run (pure domain tests)
 - No inline score editing on the dashboard (it links to the scoring page).
 - No real authentication or multi-rater workflow yet.
 
+## What Ticket 6 includes
+
+- **Markdown report export** for a project, via an "Export Markdown" button on
+  the comparison dashboard.
+- A route handler at `/projects/[id]/report.md` that verifies demo-user/project
+  ownership, fetches the same evidence as the dashboard, and returns
+  `text/markdown` as an attachment named `evalforge-report-<project-slug>.md`.
+- A pure generator (`src/lib/report.ts`, `generateReportMarkdown`) with Vitest
+  tests; it accepts already-fetched data and never queries the database.
+
+### How to export
+
+Open a project → **Comparison dashboard** → **Export Markdown** (downloads the
+`.md`). Or fetch `/projects/[id]/report.md` directly.
+
+### What the report contains
+
+Title and generation timestamp; an evidence-first preamble; evidence status and
+overall summary (total/scored/unscored/matched/unmatched runs, average score,
+best variant when available, evidence level); imported-artifact summary;
+per-variant comparison table (rubric dimensions, elapsed, tokens/s); run-level
+evidence table; the scoring rubric; a missing-data note; honest limitations; and
+recommended next evaluation steps.
+
+### Evidence and missing-data rules in the report
+
+- Manual scores are human-assigned; the report is **not** an AI-generated
+  judgment and the database / imported artifact JSON are never mutated.
+- Missing metrics and missing scores render as `—`, never as zero, and are
+  excluded from averages.
+- No winner is declared when there are no scored runs; limited evidence is
+  labeled as such; no statistical-significance claims are made.
+- Hallucination risk uses the reversed scale (5 = lowest risk), stated in the
+  report.
+
+## What Ticket 6 intentionally does NOT include
+
+- No PDF generation, chart images, or heavy export dependency.
+- No AI-written narrative or auto-scoring.
+- No execution of imported code and no mutation of artifact raw JSON.
+- No real authentication or multi-rater workflow yet.
+
 ## Layout
 
 ```text
@@ -260,8 +303,9 @@ web/
 │   └── seed.ts           # synthetic demo seed
 ├── src/
 │   ├── app/
-│   │   ├── projects/     # project + task CRUD, import, scoring, and compare pages
-│   │   │   └── [id]/compare/  # comparison dashboard (Ticket 5)
+│   │   ├── projects/     # project + task CRUD, import, scoring, compare, report
+│   │   │   ├── [id]/compare/    # comparison dashboard (Ticket 5)
+│   │   │   └── [id]/report.md/  # Markdown report route handler (Ticket 6)
 │   │   ├── dashboard/    # protected overview
 │   │   └── api/auth/     # demo sign-in / sign-out routes
 │   ├── components/       # client form + delete-confirm components

@@ -132,6 +132,21 @@ export function validateManualScoreInput(
 }
 
 /**
+ * Pick the six rubric dimensions from a wider score-like object (e.g. a Prisma
+ * ManualScore row that also carries ids/notes) into a plain ManualScore.
+ */
+export function extractManualScore(score: Record<RubricField, number>): ManualScore {
+  return {
+    correctness: score.correctness,
+    clarity: score.clarity,
+    beginnerFriendliness: score.beginnerFriendliness,
+    minimalityOfFix: score.minimalityOfFix,
+    hallucinationRisk: score.hallucinationRisk,
+    offlineUsefulness: score.offlineUsefulness,
+  };
+}
+
+/**
  * Average the score dimensions that are actually present. Missing dimensions
  * stay unavailable and are not counted as zero.
  */

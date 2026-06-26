@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDemoUser } from "@/lib/demo-user";
-import { averageManualScore, RUBRIC_DIMENSIONS, type ManualScore } from "@/lib/domain";
+import { averageManualScore, extractManualScore, RUBRIC_DIMENSIONS } from "@/lib/domain";
+import { modelNameFromRawJson } from "@/lib/artifact";
 import { buildComparison, type ComparisonRunInput } from "@/lib/comparison";
 
 export const dynamic = "force-dynamic";
@@ -10,35 +11,6 @@ export const dynamic = "force-dynamic";
 /** Render a numeric value, or "—" when unavailable. Never shows 0 for null. */
 function fmt(value: number | null, suffix = ""): string {
   return value === null ? "—" : `${value}${suffix}`;
-}
-
-function modelNameFromRaw(raw: unknown): string | null {
-  if (raw && typeof raw === "object" && "model" in raw) {
-    const model = (raw as Record<string, unknown>).model;
-    if (model && typeof model === "object" && "filename" in model) {
-      const filename = (model as Record<string, unknown>).filename;
-      if (typeof filename === "string" && filename.length > 0) return filename;
-    }
-  }
-  return null;
-}
-
-function toManualScore(score: {
-  correctness: number;
-  clarity: number;
-  beginnerFriendliness: number;
-  minimalityOfFix: number;
-  hallucinationRisk: number;
-  offlineUsefulness: number;
-}): ManualScore {
-  return {
-    correctness: score.correctness,
-    clarity: score.clarity,
-    beginnerFriendliness: score.beginnerFriendliness,
-    minimalityOfFix: score.minimalityOfFix,
-    hallucinationRisk: score.hallucinationRisk,
-    offlineUsefulness: score.offlineUsefulness,
-  };
 }
 
 async function loadProject(id: string) {
@@ -101,12 +73,12 @@ export default async function ComparePage({
   const flatRuns = project.artifacts.flatMap((artifact) =>
     artifact.modelRuns.map((run) => {
       const rawScore = run.scores[0] ?? null;
-      const score = rawScore ? toManualScore(rawScore) : null;
+      const score = rawScore ? extractManualScore(rawScore) : null;
       return {
         runId: run.id,
         promptId: run.promptId,
         variant: artifact.variant,
-        modelName: modelNameFromRaw(artifact.rawJson) ?? artifact.modelSha256,
+        modelName: modelNameFromRawJson(artifact.rawJson) ?? artifact.modelSha256,
         ok: run.ok,
         matched: run.task !== null,
         taskTitle: run.task?.title ?? null,
@@ -150,7 +122,16 @@ export default async function ComparePage({
         <Link href={`/projects/${id}`} className="text-sm hover:underline">
           ← Back to project
         </Link>
-        <h1 className="text-2xl font-bold">Comparison dashboard</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">Comparison dashboard</h1>
+          <a
+            href={`/projects/${id}/report.md`}
+            download
+            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+          >
+            Export Markdown
+          </a>
+        </div>
         <p className="text-sm text-neutral-600 dark:text-neutral-300">
           {project.name}
         </p>

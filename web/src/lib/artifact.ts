@@ -45,6 +45,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Read `model.filename` from a stored artifact's raw JSON, if present. Read-only:
+ * never mutates the artifact. Returns null when unavailable.
+ */
+export function modelNameFromRawJson(raw: unknown): string | null {
+  if (!isRecord(raw)) return null;
+  const model = raw.model;
+  if (!isRecord(model)) return null;
+  const filename = model.filename;
+  return typeof filename === "string" && filename.length > 0 ? filename : null;
+}
+
 /** Finite number, else null. Never coerces missing/invalid to 0. */
 function asNumberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
