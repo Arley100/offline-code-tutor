@@ -1,10 +1,16 @@
 # Full-Stack Spec — Draft
 
-> **Status: draft specification for a future application. Nothing here is built.**
-> This repository currently contains only the OfflineCodeTutor CLI. This document
-> describes the intended EvalForge / TutorBench Local web app so that later
-> tickets have a target to build against. Technology choices are proposals, not
-> commitments, and may change when Ticket 1 begins.
+> **Status: partially implemented.** Ticket 1 scaffolded the `web/` app and
+> Ticket 2 implemented project and benchmark-task CRUD (see "Implemented so far"
+> below). The remaining sections — artifact import, scoring, dashboard, report,
+> auth — are still draft specifications describing intended behavior. Technology
+> choices that are now in use are marked; the rest remain proposals.
+>
+> **Implemented so far (Tickets 1–2):** Next.js (App Router) + TypeScript +
+> Tailwind in `web/`; PostgreSQL via Prisma; demo placeholder cookie auth with
+> route-protection middleware; project and benchmark-task CRUD via Server Actions
+> with pure validation helpers and Vitest tests; synthetic seed + Docker Compose
+> Postgres.
 
 ## Goals and boundaries
 
@@ -54,8 +60,10 @@ shared runtime.
 
 - Seeded from the CLI's `metadata.json` (e.g. `python-factorial-debug`,
   `cpp-vector-bounds-debug`), extensible later (Ticket 7).
-- Fields: `task_key` (stable id), `prompt`, `language`, optional
-  `expected_fix_hint` (mirrors the CLI scoring hints).
+- **Implemented (Ticket 2)** fields: `taskKey` (stable slug, auto-generated and
+  unique per project), `title`, `prompt`, `language`, `difficulty`
+  (easy/medium/hard), `category` (bug type), `expectedFixHint` (expected
+  behavior/fix), `notes`, timestamps. Full CRUD inside a project.
 
 ## Model runs
 
@@ -99,7 +107,8 @@ shared runtime.
 ```text
 User(id, email, password_hash, created_at)
 Project(id, user_id -> User, name, description, created_at, updated_at)
-BenchmarkTask(id, project_id -> Project, task_key, prompt, language, expected_fix_hint?)
+BenchmarkTask(id, project_id -> Project, task_key, title, prompt, language?,
+              difficulty?, category?, expected_fix_hint?, notes?)  # implemented
 Artifact(id, project_id -> Project, variant, raw_json, model_sha256, settings_json,
          runtime_json, status, created_at)
 ModelRun(id, artifact_id -> Artifact, task_key, ok, return_code?, elapsed_seconds,

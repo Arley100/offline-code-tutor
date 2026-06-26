@@ -37,10 +37,14 @@ model BenchmarkTask {
   id              String     @id @default(cuid())
   projectId       String
   project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  taskKey         String // stable id, e.g. "python-factorial-debug"
+  taskKey         String // stable slug, e.g. "python-factorial-debug"
+  title           String // human-readable name
   prompt          String
   language        String? // e.g. "python", "cpp"
-  expectedFixHint String?
+  difficulty      String? // "easy" | "medium" | "hard"
+  category        String? // bug type / category, e.g. "off-by-one"
+  expectedFixHint String? // expected behavior or expected fix
+  notes           String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   modelRuns       ModelRun[]

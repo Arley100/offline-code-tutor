@@ -35,15 +35,23 @@ async function main() {
         create: [
           {
             taskKey: "python-factorial-debug",
+            title: "Python factorial base case (demo)",
             prompt: "Find the bug in this Python factorial function (demo).",
             language: "python",
+            difficulty: "easy",
+            category: "logic-error",
             expectedFixHint: "if n == 0: return 1",
+            notes: "Synthetic demo task.",
           },
           {
             taskKey: "cpp-vector-bounds-debug",
+            title: "C++ vector out-of-bounds loop (demo)",
             prompt: "Find the undefined behavior in this C++ loop (demo).",
             language: "cpp",
+            difficulty: "medium",
+            category: "off-by-one",
             expectedFixHint: "for (std::size_t i = 0; i < values.size(); ++i)",
+            notes: "Synthetic demo task.",
           },
         ],
       },

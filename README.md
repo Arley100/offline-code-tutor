@@ -28,12 +28,12 @@ This keeps inference offline and reproducible while letting evaluation, comparis
 ### Web app foundation (`web/`)
 
 The repository is now a small monorepo: the Python CLI stays at the root, and the
-web app foundation lives in `web/` (Next.js + TypeScript + Tailwind, PostgreSQL
-via Prisma). **Ticket 1 delivered the foundation only** — a product shell
-(landing, demo sign-in, protected dashboard, project placeholders), a Prisma
-schema draft, a synthetic seed script, and Vitest domain tests. **Artifact
-import, the scoring UI, and comparison dashboards are not implemented yet**, and
-no metrics shown in the app are real until artifact import lands.
+web app lives in `web/` (Next.js + TypeScript + Tailwind, PostgreSQL via Prisma).
+Ticket 1 delivered the foundation; **Ticket 2 added real, database-backed project
+and benchmark-task management** (full CRUD with validation and demo placeholder
+auth). **Artifact import, the scoring UI, and comparison dashboards are still not
+implemented yet**, and no metrics shown in the app are real until artifact import
+lands.
 
 ```bash
 cd web
