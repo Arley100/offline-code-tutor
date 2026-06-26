@@ -4,12 +4,14 @@ This is the **foundation** of the EvalForge web app: the evaluation, comparison,
 and reporting layer that will sit on top of benchmark artifacts produced by the
 OfflineCodeTutor Python CLI at the repository root.
 
-> **Status (through Ticket 2):** the app now has real, database-backed project
-> and benchmark-task management. Artifact import, scoring UI, and comparison
-> dashboards are still **not implemented yet**. No metrics shown in the app are
-> real until artifact import lands. This is an independent portfolio/research
-> project inspired by the ADTC 2026 Laptop LLM Challenge — not an official
-> submission. Authentication is still a demo placeholder, clearly labeled in the
+> **Status (through Ticket 3):** the app has real, database-backed project and
+> benchmark-task management, plus **JSON artifact import** (validate, store, create
+> model runs, match runs to tasks by stable task key). The scoring UI and
+> comparison dashboard are still **not implemented yet** — imported metrics are
+> shown as-is and missing metrics are shown as unavailable, never zero. This is an
+> independent portfolio/research project inspired by the ADTC 2026 Laptop LLM
+> Challenge — not an official submission. Authentication is still a demo
+> placeholder, clearly labeled in the
 > UI; it is **not** production-ready auth.
 
 ## Stack
@@ -54,6 +56,12 @@ want versioned migration files. `db:seed` inserts **synthetic** demo data only
 (one demo project, placeholder tasks and runs). It is not real evaluation data and
 contains no real metrics.
 
+`db:seed` is **idempotent**: the demo project, tasks, and seed artifact use stable
+ids/keys, so re-running it updates/resets the same demo data instead of creating
+duplicate demo projects. It only touches the seed-owned rows — user-created
+projects and user-imported artifacts are left untouched. (It also removes any
+legacy duplicate demo projects created by earlier, non-idempotent seed runs.)
+
 If Prisma reports that it cannot reach the database on Windows, prefer
 `127.0.0.1` over `localhost` in `DATABASE_URL`. Some local setups resolve
 `localhost` to IPv6 `::1`, while Docker is publishing Postgres on the IPv4 loopback
@@ -67,7 +75,26 @@ healthy before running `npm run db:push`.
 2. Go to **Projects** to create an evaluation project, then open it to add
    benchmark tasks (title, language, difficulty, category, prompt, expected
    behavior/fix, notes).
-3. All data belongs to a single demo user until real auth is added.
+3. On the project page, use **Import artifact** to import an OfflineCodeTutor
+   benchmark JSON (upload a file or paste the contents of a `results/benchmark_*.json`
+   from the repo root). The app validates it, stores the artifact, creates a model
+   run per benchmark run, and matches runs to tasks by `taskKey` == the run's
+   `prompt_id`. Unmatched runs are imported and clearly flagged.
+4. All data belongs to a single demo user until real auth is added.
+
+### Importing an artifact
+
+- **Required top-level fields:** `project`, `created_at_utc`, `benchmark_status`,
+  `model`, `runtime`, `settings`, `manual_accuracy`, and a non-empty `runs` array.
+  Each run needs `prompt_id`, `prompt`, and `ok`. Files missing these are rejected
+  with a readable error (and non-OfflineCodeTutor JSON is rejected as such).
+- **Missing optional metrics** (`elapsed_seconds`, `tokens_per_second`,
+  `clean_output_preview`) are stored as `null` / shown as "—", **never as zero**.
+  Nothing is fabricated.
+- **Variant** comes from `settings.prompt_variant`; unknown variants are imported
+  but flagged.
+- **Duplicate guard:** re-importing identical JSON into the same project is
+  blocked via a content hash. Delete the artifact to re-import.
 
 ## Run
 
@@ -108,14 +135,29 @@ npm run test        # vitest run (pure domain tests)
 - `docker-compose.yml` for local Postgres, extended task fields in the schema,
   and updated synthetic seed data.
 
-## What Ticket 2 intentionally does NOT include
+## What Ticket 3 includes
 
-- No artifact import (no parsing of CLI benchmark JSON yet — that is Ticket 3).
-- No scoring UI.
+- **JSON artifact import** on the project page (file upload or paste).
+- Pure parser/validator (`src/lib/artifact.ts`) with Vitest tests covering valid
+  baseline/prompt_v3, malformed JSON, missing required fields, unknown variant,
+  and missing optional metrics → `null` (never 0).
+- `importArtifact` / `deleteArtifact` Server Actions: validate, store an
+  `Artifact`, create `ModelRun` rows, match runs to `BenchmarkTask` by `taskKey`,
+  block duplicate imports via a content hash.
+- Project page UI: imported-artifact list with per-run summary, matched/unmatched
+  indicators, and an unmatched-task warning.
+- Minimal schema additions to `Artifact`: `benchmarkStatus`, `sourceCreatedAtUtc`,
+  `contentHash` (all nullable).
+- Synthetic fixtures under `src/lib/__fixtures__/`.
+
+## What Ticket 3 intentionally does NOT include
+
+- No manual scoring UI (that is Ticket 4).
 - No comparison dashboard beyond simple counts.
 - No real authentication (the cookie demo is a placeholder, labeled in the UI).
-- No AI features and no inference (inference stays in the CLI).
-- No real or private data — seed data is synthetic.
+- No AI features, no inference, and no execution of imported code.
+- No fabricated metrics; missing metrics are unavailable, never zero.
+- No real or private data — seed data and fixtures are synthetic.
 
 ## Layout
 

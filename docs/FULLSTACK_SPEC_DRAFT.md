@@ -1,16 +1,17 @@
 # Full-Stack Spec — Draft
 
-> **Status: partially implemented.** Ticket 1 scaffolded the `web/` app and
-> Ticket 2 implemented project and benchmark-task CRUD (see "Implemented so far"
-> below). The remaining sections — artifact import, scoring, dashboard, report,
-> auth — are still draft specifications describing intended behavior. Technology
-> choices that are now in use are marked; the rest remain proposals.
+> **Status: partially implemented.** Tickets 1–3 are built (see "Implemented so
+> far" below). The remaining sections — scoring, dashboard, report, real auth —
+> are still draft specifications describing intended behavior. Technology choices
+> that are now in use are marked; the rest remain proposals.
 >
-> **Implemented so far (Tickets 1–2):** Next.js (App Router) + TypeScript +
+> **Implemented so far (Tickets 1–3):** Next.js (App Router) + TypeScript +
 > Tailwind in `web/`; PostgreSQL via Prisma; demo placeholder cookie auth with
 > route-protection middleware; project and benchmark-task CRUD via Server Actions
-> with pure validation helpers and Vitest tests; synthetic seed + Docker Compose
-> Postgres.
+> with pure validation helpers and Vitest tests; **JSON artifact import** (pure
+> parser/validator, `Artifact` + `ModelRun` creation, run-to-task matching by
+> `taskKey`, duplicate guard via content hash, missing metrics stored as null);
+> synthetic seed + Docker Compose Postgres.
 
 ## Goals and boundaries
 
@@ -65,20 +66,22 @@ shared runtime.
   (easy/medium/hard), `category` (bug type), `expectedFixHint` (expected
   behavior/fix), `notes`, timestamps. Full CRUD inside a project.
 
-## Model runs
+## Model runs — implemented (Ticket 3)
 
 - Created during artifact import: one per `runs[]` entry.
-- Store prompt id, ok/return code, elapsed seconds, tokens/sec (nullable),
-  cleaned-output preview, parsed timings, and a link to the originating artifact
-  and variant.
+- Store prompt id, ok, elapsed seconds (nullable), tokens/sec (nullable),
+  cleaned-output preview (nullable), a nullable `taskId` link (matched by
+  `taskKey`), and a link to the originating artifact.
 - Never invented: nullable metrics stay null (see `ARTIFACT_FORMAT.md`).
 
-## Imported artifacts
+## Imported artifacts — implemented (Ticket 3)
 
-- Upload endpoint validates against the `ARTIFACT_FORMAT.md` contract:
-  strict structure, lenient optional fields, "unavailable" never zero.
-- Store the validated raw JSON plus extracted metadata (model sha256, variant,
-  settings, runtime). The raw artifact is immutable after import.
+- `importArtifact` Server Action validates with the pure parser
+  (`src/lib/artifact.ts`) against the `ARTIFACT_FORMAT.md` contract: strict
+  structure, lenient optional fields, "unavailable" never zero.
+- Accepts file upload or pasted JSON. Stores the immutable raw JSON plus extracted
+  metadata (variant, model sha256, benchmark status, source created-at).
+- Duplicate imports into the same project are blocked via a SHA-256 content hash.
 
 ## Manual scores
 
@@ -109,8 +112,9 @@ User(id, email, password_hash, created_at)
 Project(id, user_id -> User, name, description, created_at, updated_at)
 BenchmarkTask(id, project_id -> Project, task_key, title, prompt, language?,
               difficulty?, category?, expected_fix_hint?, notes?)  # implemented
-Artifact(id, project_id -> Project, variant, raw_json, model_sha256, settings_json,
-         runtime_json, status, created_at)
+Artifact(id, project_id -> Project, variant, raw_json, model_sha256,
+         benchmark_status?, source_created_at_utc?, content_hash?, status,
+         created_at)  # implemented (Ticket 3)
 ModelRun(id, artifact_id -> Artifact, task_key, ok, return_code?, elapsed_seconds,
          tokens_per_second?, clean_output_preview, timings_json)
 ManualScore(id, model_run_id -> ModelRun, user_id -> User, correctness, clarity,

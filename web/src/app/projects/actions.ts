@@ -1,10 +1,13 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDemoUser } from "@/lib/demo-user";
 import { type FormState } from "@/lib/form";
+import { parseArtifact } from "@/lib/artifact";
 import {
   slugify,
   validateProjectInput,
@@ -200,6 +203,111 @@ export async function deleteTask(formData: FormData): Promise<void> {
   const user = await getOrCreateDemoUser();
   if (await ownedProjectId(projectId, user.id)) {
     await prisma.benchmarkTask.delete({ where: { id: taskId, projectId } });
+  }
+  revalidatePath(`/projects/${projectId}`);
+  redirect(`/projects/${projectId}`);
+}
+
+export async function importArtifact(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const projectId = String(formData.get("projectId") ?? "");
+
+  // Accept either an uploaded file or pasted text; file wins if both present.
+  const file = formData.get("artifactFile");
+  let jsonText = String(formData.get("artifactJson") ?? "");
+  if (file instanceof File && file.size > 0) {
+    jsonText = await file.text();
+  }
+  if (!jsonText.trim()) {
+    return {
+      ok: false,
+      fieldErrors: { artifactJson: "Paste artifact JSON or choose a file to import." },
+    };
+  }
+
+  const parsed = parseArtifact(jsonText);
+  if (!parsed.ok) {
+    return { ok: false, fieldErrors: { artifactJson: parsed.error } };
+  }
+
+  try {
+    const user = await getOrCreateDemoUser();
+    if (!(await ownedProjectId(projectId, user.id))) {
+      return { ok: false, error: "Project not found." };
+    }
+
+    const contentHash = createHash("sha256").update(jsonText).digest("hex");
+    const duplicate = await prisma.artifact.findFirst({
+      where: { projectId, contentHash },
+      select: { id: true },
+    });
+    if (duplicate) {
+      return {
+        ok: false,
+        error: "This artifact appears to have already been imported into this project.",
+      };
+    }
+
+    const tasks = await prisma.benchmarkTask.findMany({
+      where: { projectId },
+      select: { id: true, taskKey: true },
+    });
+    const taskIdByKey = new Map(tasks.map((t) => [t.taskKey, t.id]));
+
+    const matched = parsed.artifact.runs.filter((run) =>
+      taskIdByKey.has(run.promptId),
+    ).length;
+    const unmatched = parsed.artifact.runs.length - matched;
+
+    await prisma.artifact.create({
+      data: {
+        projectId,
+        variant: parsed.artifact.variant,
+        modelSha256: parsed.artifact.modelSha256,
+        benchmarkStatus: parsed.artifact.benchmarkStatus,
+        sourceCreatedAtUtc: parsed.artifact.createdAtUtc,
+        contentHash,
+        status: "imported",
+        rawJson: parsed.artifact.raw as Prisma.InputJsonValue,
+        modelRuns: {
+          create: parsed.artifact.runs.map((run) => ({
+            promptId: run.promptId,
+            ok: run.ok,
+            // Unavailable metrics persist as null, never 0.
+            elapsedSeconds: run.elapsedSeconds,
+            tokensPerSecond: run.tokensPerSecond,
+            cleanOutputPreview: run.cleanOutputPreview,
+            taskId: taskIdByKey.get(run.promptId) ?? null,
+          })),
+        },
+      },
+    });
+
+    revalidatePath(`/projects/${projectId}`);
+    const variantNote = parsed.artifact.variantKnown
+      ? ""
+      : ` Variant "${parsed.artifact.variant}" is not a known variant and was flagged.`;
+    return {
+      ok: true,
+      message:
+        `Imported ${parsed.artifact.runs.length} run(s): ${matched} matched to ` +
+        `tasks, ${unmatched} unmatched.${variantNote}`,
+    };
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    return { ok: false, error: DB_ERROR };
+  }
+}
+
+export async function deleteArtifact(formData: FormData): Promise<void> {
+  const projectId = String(formData.get("projectId") ?? "");
+  const artifactId = String(formData.get("artifactId") ?? "");
+  const user = await getOrCreateDemoUser();
+  if (await ownedProjectId(projectId, user.id)) {
+    // Ensure the artifact belongs to this project before deleting.
+    await prisma.artifact.deleteMany({ where: { id: artifactId, projectId } });
   }
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}`);

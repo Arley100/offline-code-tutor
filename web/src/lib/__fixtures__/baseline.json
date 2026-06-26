@@ -1,0 +1,49 @@
+{
+  "project": "OfflineCodeTutor",
+  "created_at_utc": "2026-06-20T16:43:29.881838+00:00",
+  "benchmark_status": "completed",
+  "model": {
+    "path": "model/Synthetic-Demo-Model.gguf",
+    "filename": "Synthetic-Demo-Model.gguf",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "size_bytes": 123456
+  },
+  "runtime": {
+    "platform": "SyntheticOS",
+    "psutil_available": false,
+    "total_ram_bytes": null,
+    "harness_peak_rss_bytes": null
+  },
+  "settings": {
+    "max_tokens": 64,
+    "temperature": 0.2,
+    "timeout_seconds": 120,
+    "prompt_variant": "baseline"
+  },
+  "runs": [
+    {
+      "prompt_id": "python-factorial-debug",
+      "prompt": "Find the bug in this Python factorial function (synthetic).",
+      "ok": true,
+      "elapsed_seconds": 5.26,
+      "tokens_per_second": 21.55,
+      "clean_output_preview": "Synthetic answer for the factorial task."
+    },
+    {
+      "prompt_id": "cpp-vector-bounds-debug",
+      "prompt": "Find the undefined behavior in this C++ loop (synthetic).",
+      "ok": true
+    }
+  ],
+  "manual_accuracy": {
+    "status": "not_scored",
+    "rubric": {
+      "correctness": null,
+      "clarity": null,
+      "beginner_friendliness": null,
+      "minimality_of_fix": null,
+      "hallucination_risk": null,
+      "offline_usefulness": null
+    }
+  }
+}

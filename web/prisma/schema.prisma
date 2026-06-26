@@ -53,15 +53,22 @@ model BenchmarkTask {
 }
 
 model Artifact {
-  id          String     @id @default(cuid())
-  projectId   String
-  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  variant     String // "baseline" | "prompt_v2" | "prompt_v3"
-  modelSha256 String?
-  status      String     @default("imported") // "imported" | "invalid"
-  rawJson     Json // the validated source artifact, stored immutably
-  createdAt   DateTime   @default(now())
-  modelRuns   ModelRun[]
+  id                 String     @id @default(cuid())
+  projectId          String
+  project            Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  variant            String // "baseline" | "prompt_v2" | "prompt_v3" | other (flagged)
+  modelSha256        String?
+  // Derived-from-source display fields (null when the source omitted them).
+  benchmarkStatus    String? // the artifact's own benchmark_status
+  sourceCreatedAtUtc String? // the artifact's own created_at_utc
+  // sha256 of the imported JSON text, used to detect duplicate imports.
+  contentHash        String?
+  status             String     @default("imported") // "imported" | "invalid"
+  rawJson            Json // the validated source artifact, stored immutably
+  createdAt          DateTime   @default(now()) // import time
+  modelRuns          ModelRun[]
+
+  @@index([projectId, contentHash])
 }
 
 model ModelRun {

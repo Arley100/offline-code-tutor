@@ -29,11 +29,12 @@ This keeps inference offline and reproducible while letting evaluation, comparis
 
 The repository is now a small monorepo: the Python CLI stays at the root, and the
 web app lives in `web/` (Next.js + TypeScript + Tailwind, PostgreSQL via Prisma).
-Ticket 1 delivered the foundation; **Ticket 2 added real, database-backed project
-and benchmark-task management** (full CRUD with validation and demo placeholder
-auth). **Artifact import, the scoring UI, and comparison dashboards are still not
-implemented yet**, and no metrics shown in the app are real until artifact import
-lands.
+Ticket 1 delivered the foundation, Ticket 2 added database-backed project and
+benchmark-task management, and **Ticket 3 added JSON artifact import** (validate a
+CLI benchmark artifact, store it, create model runs, and match runs to tasks by
+stable key). **The scoring UI and comparison dashboard are still not implemented
+yet**; imported metrics are shown as-is and missing metrics are shown as
+unavailable, never zero.
 
 ```bash
 cd web
